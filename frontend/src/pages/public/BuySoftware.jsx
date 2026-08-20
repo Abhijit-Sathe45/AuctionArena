@@ -16,8 +16,11 @@ const PLANS = [
 export default function BuySoftware() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
-    tournamentName: '', tournamentDate: '', organizerName: '', email: '', phone: '', logoUrl: null,
+    tournamentName: '', tournamentDate: '', organizerName: '', email: '', phone: '',
+    password: '', confirmPassword: '', logoUrl: null,
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1_MONTH');
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
@@ -28,9 +31,23 @@ export default function BuySoftware() {
   async function handleSubmit(e) {
     e.preventDefault();
     setStatus({ type: '', message: '' });
+
+    if (!form.password || form.password.length < 6) {
+      setStatus({ type: 'error', message: 'Password must be at least 6 characters long.' });
+      return;
+    }
+
+    if (form.password !== form.confirmPassword) {
+      setStatus({ type: 'error', message: 'Passwords do not match. Please verify your password.' });
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const { data } = await api.post('/organizer-signup/initiate', { ...form, planType: selectedPlan });
+      const { data } = await api.post('/organizer-signup/initiate', {
+        ...form,
+        planType: selectedPlan,
+      });
 
       if (data.razorpayOrder) {
         const response = await openRazorpayCheckout({
@@ -41,9 +58,9 @@ export default function BuySoftware() {
         const verifyRes = await api.post('/organizer-signup/verify-payment', {
           organizerId: data.organizerId, ...response,
         });
-        setCredentials({ loginId: verifyRes.data.loginId, password: data.rawPasswordPreview, slug: verifyRes.data.slug });
+        setCredentials({ loginId: verifyRes.data.loginId, slug: verifyRes.data.slug });
       } else {
-        setCredentials({ loginId: data.loginId, password: data.rawPasswordPreview, slug: data.slug });
+        setCredentials({ loginId: data.loginId, slug: data.slug });
       }
     } catch (err) {
       setStatus({ type: 'error', message: err.response?.data?.message || err.message || 'Something went wrong.' });
@@ -55,14 +72,33 @@ export default function BuySoftware() {
   if (credentials) {
     return (
       <Center>
-        <div className="card max-w-md text-center space-y-3">
-          <h2 className="font-display text-3xl text-turf">Welcome Aboard! 🎉</h2>
-          <p className="text-black/70">Your auction software account is ready. Save these credentials — you'll need them to log in.</p>
-          <div className="bg-turf/5 rounded-md p-4 text-left space-y-1">
-            <p><span className="font-semibold">Login ID:</span> {credentials.loginId}</p>
-            <p><span className="font-semibold">Password:</span> {credentials.password}</p>
+        <div className="card max-w-md w-full text-center space-y-4 shadow-md">
+          <div className="w-14 h-14 bg-turf/10 text-turf rounded-full flex items-center justify-center mx-auto text-3xl">
+            🎉
           </div>
-          <button className="btn-primary w-full" onClick={() => navigate('/organizer/login')}>Go to Login</button>
+          <h2 className="font-display text-3xl text-turf">
+            Welcome Aboard!
+          </h2>
+          <p className="text-black/70 text-sm">
+            Your auction software account is ready.<br/>
+            You can now log in using your registered credentials.
+          </p>
+          <div className="bg-turf/5 rounded-xl p-4 text-left space-y-2.5 border border-turf/15">
+            <div>
+              <span className="text-xs text-black/50 block font-medium">Login ID</span>
+              <span className="font-semibold text-turf-dark text-sm sm:text-base">{credentials.loginId}</span>
+            </div>
+            <div>
+              <span className="text-xs text-black/50 block font-medium">Password</span>
+              <span className="font-medium text-black/70 text-sm">•••••••• <span className="text-xs text-black/50">(Password created by you)</span></span>
+            </div>
+          </div>
+          <button
+            className="btn-primary w-full py-3 text-base shadow-sm"
+            onClick={() => navigate("/organizer/login")}
+          >
+            Go to Organizer Login
+          </button>
         </div>
       </Center>
     );
@@ -88,9 +124,9 @@ export default function BuySoftware() {
           <label className="label-text">Your Name (Organizer)</label>
           <input required className="input-field" value={form.organizerName} onChange={e => update('organizerName', e.target.value)} />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label className="label-text">Email</label>
+            <label className="label-text">Email (will be your Login ID)</label>
             <input required type="email" className="input-field" value={form.email} onChange={e => update('email', e.target.value)} />
           </div>
           <div>
@@ -99,16 +135,93 @@ export default function BuySoftware() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <label className="label-text">Create Password</label>
+            <div className="relative">
+              <input
+                required
+                type={showPassword ? 'text' : 'password'}
+                minLength={6}
+                placeholder="Min 6 characters"
+                className="input-field pr-10"
+                value={form.password}
+                onChange={e => update('password', e.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-black/40 hover:text-black/70 focus:outline-none"
+                onClick={() => setShowPassword(v => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {form.password && form.password.length < 6 && (
+              <p className="text-[11px] text-amber-600 mt-1">Must be at least 6 characters</p>
+            )}
+          </div>
+          <div>
+            <label className="label-text">Confirm Password</label>
+            <div className="relative">
+              <input
+                required
+                type={showConfirmPassword ? 'text' : 'password'}
+                minLength={6}
+                placeholder="Re-enter password"
+                className={`input-field pr-10 ${
+                  form.confirmPassword && form.password !== form.confirmPassword ? 'border-red-400 focus:ring-red-400' : ''
+                }`}
+                value={form.confirmPassword}
+                onChange={e => update('confirmPassword', e.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-black/40 hover:text-black/70 focus:outline-none"
+                onClick={() => setShowConfirmPassword(v => !v)}
+                tabIndex={-1}
+                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+              >
+                {showConfirmPassword ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            {form.confirmPassword && (
+              <p className={`text-[11px] mt-1 ${form.password === form.confirmPassword ? 'text-emerald-600 font-medium' : 'text-red-500'}`}>
+                {form.password === form.confirmPassword ? '✓ Passwords match' : '✕ Passwords do not match'}
+              </p>
+            )}
+          </div>
+        </div>
+
         <ImageUpload label="Tournament Logo" onUploaded={(url) => update('logoUrl', url)} />
 
         <div>
           <label className="label-text mb-2">Choose Your Pass</label>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
             {PLANS.map(p => (
               <button type="button" key={p.planType} onClick={() => setSelectedPlan(p.planType)}
-                className={`text-left border rounded-lg p-3 transition-colors ${selectedPlan === p.planType ? 'border-gold bg-gold/10' : 'border-black/10 hover:border-black/25'}`}>
-                <p className="font-semibold text-sm">{p.label}</p>
-                <p className="text-xs text-black/50 mt-1">{p.blurb}</p>
+                className={`text-left border-2 rounded-xl p-3 transition-colors active:scale-[0.98] ${selectedPlan === p.planType ? 'border-gold bg-gold/10' : 'border-black/10 hover:border-black/25'}`}>
+                <p className="font-semibold text-sm text-turf">{p.label}</p>
+                <p className="text-xs text-black/60 mt-1">{p.blurb}</p>
               </button>
             ))}
           </div>
@@ -116,7 +229,7 @@ export default function BuySoftware() {
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
+        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3">
           {submitting ? 'Processing…' : 'Proceed to Payment'}
         </button>
       </form>
@@ -125,5 +238,5 @@ export default function BuySoftware() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
 }

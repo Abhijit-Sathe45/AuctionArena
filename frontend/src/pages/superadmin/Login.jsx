@@ -27,9 +27,9 @@ export default function SuperAdminLogin() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-turf-dark p-6">
+    <div className="min-h-screen flex items-center justify-center bg-turf-dark p-3.5 sm:p-6 py-8 sm:py-12">
       <form onSubmit={handleSubmit} className="card max-w-sm w-full space-y-4">
-        <h1 className="font-display text-3xl text-turf text-center">Super Admin</h1>
+        <h1 className="font-display text-2xl sm:text-3xl text-turf text-center">Super Admin</h1>
         <div>
           <label className="label-text">Email</label>
           <input required type="email" className="input-field" value={email} onChange={e => setEmail(e.target.value)} />
@@ -39,7 +39,9 @@ export default function SuperAdminLogin() {
           <input required type="password" className="input-field" value={password} onChange={e => setPassword(e.target.value)} />
         </div>
         <StatusMessage type={status.type} message={status.message} />
-        <button type="submit" disabled={submitting} className="btn-primary w-full">{submitting ? 'Logging in…' : 'Log In'}</button>
+        <button type="submit" disabled={submitting} className="btn-primary w-full py-3 text-base">
+          {submitting ? 'Logging in…' : 'Log In'}
+        </button>
       </form>
     </div>
   );

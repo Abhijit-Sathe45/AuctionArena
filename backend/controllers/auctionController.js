@@ -6,6 +6,7 @@ const Player = require('../models/Player');
 const Team = require('../models/Team');
 const { getNextBidAmount } = require('../utils/bidIncrement');
 const auctionService = require('../services/auctionService');
+const auctionTimerService = require('../services/auctionTimerService');
 
 // Helper: get or create the auction state doc for this organizer
 async function getOrCreateState(organizerId) {
@@ -113,11 +114,30 @@ async function nextPlayer(req, res) {
   player.auctionStatus = 'IN_AUCTION';
   await player.save();
 
+  const settings = await AuctionSettings.findOne({ organizer: organizerId });
+
   state.status = 'RUNNING';
   state.currentPlayer = player._id;
   state.currentBidAmount = player.basePrice;
   state.currentBidTeam = null;
   state.currentBidHistory = [];
+  state.passedTeams = [];
+
+  // Countdown timer settings
+  state.countdownEnabled = !!settings?.countdownEnabled;
+  state.countdownDuration = settings?.countdownDuration || 60;
+
+  if (state.countdownEnabled) {
+    const now = new Date();
+    state.biddingStartedAt = now;
+    state.biddingEndsAt = new Date(now.getTime() + state.countdownDuration * 1000);
+    auctionTimerService.startAuctionTimer(organizerId, state.countdownDuration);
+  } else {
+    state.biddingStartedAt = null;
+    state.biddingEndsAt = null;
+    auctionTimerService.clearAuctionTimer(organizerId);
+  }
+
   await state.save();
 
   const populated = await state.populate('currentPlayer currentCategory');
@@ -150,66 +170,37 @@ async function undoBid(req, res) {
 // POST /api/auction/sold  -- marks current player SOLD to current highest bidder
 async function markSold(req, res) {
   const organizerId = req.user.id;
-  const state = await getOrCreateState(organizerId);
-  if (!state.currentPlayer) return res.status(400).json({ message: 'No player currently in auction' });
-  if (!state.currentBidTeam) return res.status(400).json({ message: 'No bids placed yet — use Mark Unsold instead.' });
+  auctionTimerService.clearAuctionTimer(organizerId);
 
-  const player = await Player.findById(state.currentPlayer);
-  const team = await Team.findById(state.currentBidTeam);
-
-  player.auctionStatus = 'SOLD';
-  player.soldTo = team._id;
-  player.soldPrice = state.currentBidAmount;
-  await player.save();
-
-  team.purseRemaining -= state.currentBidAmount;
-  await team.save();
-
-  await AuctionLog.create({
-    organizer: organizerId, player: player._id, result: 'SOLD',
-    finalTeam: team._id, finalPrice: state.currentBidAmount, round: state.currentRound,
-    bids: state.currentBidHistory,
-  });
-
-  state.currentPlayer = null;
-  state.currentBidAmount = 0;
-  state.currentBidTeam = null;
-  state.currentBidHistory = [];
-  await state.save();
-
-  emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team });
-  res.json({ message: `${player.name} sold to ${team.teamName} for Rs. ${player.soldPrice}`, player, team });
+  try {
+    const { player, team, finalPrice } = await auctionService.resolveSold(organizerId);
+    emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team, finalPrice });
+    res.json({ message: `${player.name} sold to ${team.teamName} for Rs. ${finalPrice}`, player, team });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 }
 
 // POST /api/auction/unsold -- marks current player UNSOLD
 async function markUnsold(req, res) {
   const organizerId = req.user.id;
-  const state = await getOrCreateState(organizerId);
-  if (!state.currentPlayer) return res.status(400).json({ message: 'No player currently in auction' });
+  auctionTimerService.clearAuctionTimer(organizerId);
 
-  const player = await Player.findById(state.currentPlayer);
-  player.auctionStatus = 'UNSOLD';
-  await player.save();
-
-  await AuctionLog.create({
-    organizer: organizerId, player: player._id, result: 'UNSOLD', round: state.currentRound,
-    bids: state.currentBidHistory,
-  });
-
-  state.currentPlayer = null;
-  state.currentBidAmount = 0;
-  state.currentBidTeam = null;
-  state.currentBidHistory = [];
-  await state.save();
-
-  emitAuctionUpdate(req, { event: 'PLAYER_UNSOLD', player });
-  res.json({ message: `${player.name} marked unsold`, player });
+  try {
+    const { player } = await auctionService.resolveUnsold(organizerId);
+    emitAuctionUpdate(req, { event: 'PLAYER_UNSOLD', player });
+    res.json({ message: `${player.name} marked unsold`, player });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 }
 
 // POST /api/auction/re-auction-unsold -- moves all UNSOLD players back to PENDING for a new round
 // If a category is currently selected, also rebuilds & reshuffles that category's queue automatically.
 async function reAuctionUnsold(req, res) {
   const organizerId = req.user.id;
+  auctionTimerService.clearAuctionTimer(organizerId);
+
   const state = await getOrCreateState(organizerId);
   await Player.updateMany(
     { organizer: organizerId, auctionStatus: 'UNSOLD' },

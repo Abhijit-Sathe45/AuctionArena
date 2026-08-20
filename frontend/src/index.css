@@ -2,8 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-ivory text-turf-dark font-body;
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  @apply bg-ivory text-turf-dark font-body antialiased;
+  overflow-x: hidden;
+  touch-action: manipulation;
 }
 
 .font-display {
@@ -12,30 +18,44 @@ body {
 }
 
 .btn-primary {
-  @apply bg-gold hover:bg-gold-dark text-turf-dark font-semibold px-5 py-2.5 rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center bg-gold hover:bg-gold-dark active:bg-gold-dark text-turf-dark font-semibold px-4 sm:px-5 py-2.5 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
 }
 .btn-secondary {
-  @apply bg-turf hover:bg-turf-light text-ivory font-semibold px-5 py-2.5 rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center bg-turf hover:bg-turf-light active:bg-turf-light text-ivory font-semibold px-4 sm:px-5 py-2.5 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
 }
 .btn-danger {
-  @apply bg-clay hover:opacity-90 text-ivory font-semibold px-5 py-2.5 rounded-md transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center bg-clay hover:opacity-90 active:opacity-90 text-ivory font-semibold px-4 sm:px-5 py-2.5 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
 }
 .card {
-  @apply bg-white rounded-xl shadow-sm border border-black/5 p-5;
+  @apply bg-white rounded-xl shadow-sm border border-black/5 p-3.5 sm:p-5;
 }
 .input-field {
-  @apply w-full border border-black/15 rounded-md px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-gold/60 focus:border-gold;
+  @apply w-full border border-black/15 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-gold/60 focus:border-gold transition-colors;
 }
 .label-text {
-  @apply block text-sm font-medium text-turf-dark/80 mb-1;
+  @apply block text-xs sm:text-sm font-medium text-turf-dark/80 mb-1;
 }
 
 .btn-save {
-  @apply inline-flex items-center gap-1 bg-turf hover:bg-turf-light text-ivory text-xs font-semibold px-3 py-1.5 rounded-md transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-turf;
+  @apply inline-flex items-center justify-center gap-1 bg-turf hover:bg-turf-light text-ivory text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-turf active:scale-[0.97] select-none;
 }
 
 .badge-unsaved {
-  @apply inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gold-dark bg-gold/15 px-2 py-0.5 rounded-full;
+  @apply inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gold-dark bg-gold/15 px-2 py-0.5 rounded-full shrink-0;
+}
+
+/* Smooth touch scrolling for responsive tables & tickers */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.scroll-touch::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scroll-touch::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
 }
 @keyframes fadeIn {
   from {
@@ -66,7 +86,6 @@ body {
 }
 
 @keyframes splashDot {
-
   0%,
   80%,
   100% {
@@ -78,4 +97,112 @@ body {
     opacity: 1;
     transform: scale(1.15);
   }
+}
+
+/* 3D Rubber Stamp Animations */
+@keyframes stampSlam {
+  0% {
+    opacity: 0;
+    transform: perspective(600px) scale(3.2) rotate(-28deg) translateY(-60px);
+    filter: blur(6px);
+  }
+  50% {
+    opacity: 0.95;
+    transform: perspective(600px) scale(1.18) rotate(-10deg) translateY(0px);
+    filter: blur(0px);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(600px) scale(0.94) rotate(-13deg);
+  }
+  85% {
+    transform: perspective(600px) scale(1.03) rotate(-11deg);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(600px) scale(1) rotate(-12deg);
+  }
+}
+
+@keyframes stampSlamRed {
+  0% {
+    opacity: 0;
+    transform: perspective(600px) scale(3.2) rotate(28deg) translateY(-60px);
+    filter: blur(6px);
+  }
+  50% {
+    opacity: 0.95;
+    transform: perspective(600px) scale(1.18) rotate(12deg) translateY(0px);
+    filter: blur(0px);
+  }
+  70% {
+    opacity: 1;
+    transform: perspective(600px) scale(0.94) rotate(15deg);
+  }
+  85% {
+    transform: perspective(600px) scale(1.03) rotate(13deg);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(600px) scale(1) rotate(14deg);
+  }
+}
+
+@keyframes stampImpactShake {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-3px, 4px); }
+  40% { transform: translate(3px, -3px); }
+  60% { transform: translate(-2px, 2px); }
+  80% { transform: translate(2px, -1px); }
+}
+
+@keyframes timerHeartbeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.animate-stamp-sold {
+  animation: stampSlam 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-stamp-unsold {
+  animation: stampSlamRed 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+.animate-stamp-shake {
+  animation: stampImpactShake 0.4s ease-out;
+}
+
+.animate-timer-heartbeat {
+  animation: timerHeartbeat 0.7s ease-in-out infinite;
+}
+
+.stamp-sold-3d {
+  border: 6px solid #10b981;
+  outline: 3px dashed rgba(16, 185, 129, 0.6);
+  outline-offset: 4px;
+  color: #10b981;
+  background: rgba(6, 78, 59, 0.35);
+  box-shadow:
+    0 0 40px rgba(16, 185, 129, 0.45),
+    inset 0 0 25px rgba(16, 185, 129, 0.25),
+    0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  text-shadow:
+    3px 3px 0px #064e3b,
+    0 0 25px rgba(16, 185, 129, 0.8);
+}
+
+.stamp-unsold-3d {
+  border: 6px solid #ef4444;
+  outline: 3px dashed rgba(239, 68, 68, 0.6);
+  outline-offset: 4px;
+  color: #ef4444;
+  background: rgba(127, 29, 29, 0.35);
+  box-shadow:
+    0 0 40px rgba(239, 68, 68, 0.45),
+    inset 0 0 25px rgba(239, 68, 68, 0.25),
+    0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  text-shadow:
+    3px 3px 0px #7f1d1d,
+    0 0 25px rgba(239, 68, 68, 0.8);
 }

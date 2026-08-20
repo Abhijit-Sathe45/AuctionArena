@@ -91,9 +91,9 @@ export default function TeamRegister() {
           <input required className="input-field" value={form.teamName} onChange={e => update('teamName', e.target.value)} />
         </div>
 
-        <div className="flex items-center gap-2">
-          <input type="checkbox" id="plays" checked={form.ownerPlaysMatch} onChange={e => update('ownerPlaysMatch', e.target.checked)} />
-          <label htmlFor="plays" className="text-sm">I will also play as a player in matches</label>
+        <div className="flex items-center gap-2.5 bg-turf/5 p-3 rounded-lg">
+          <input type="checkbox" id="plays" className="w-4 h-4 rounded text-turf accent-turf" checked={form.ownerPlaysMatch} onChange={e => update('ownerPlaysMatch', e.target.checked)} />
+          <label htmlFor="plays" className="text-xs sm:text-sm font-medium cursor-pointer">I will also play as a player in matches</label>
         </div>
 
         <div>
@@ -105,12 +105,14 @@ export default function TeamRegister() {
         <ImageUpload label="Team Logo" onUploaded={(url) => update('teamLogoUrl', url)} />
 
         {info.teamRegistrationFee > 0 && (
-          <p className="text-sm text-turf font-medium">Registration Fee: Rs. {info.teamRegistrationFee}</p>
+          <p className="text-sm text-turf font-semibold bg-gold/15 px-3 py-2 rounded-lg text-center">
+            Registration Fee: Rs. {info.teamRegistrationFee}
+          </p>
         )}
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
+        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3">
           {submitting ? 'Processing…' : info.teamRegistrationFee > 0 ? `Pay Rs. ${info.teamRegistrationFee} & Register` : 'Register Team'}
         </button>
       </form>
@@ -119,5 +121,5 @@ export default function TeamRegister() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
 }

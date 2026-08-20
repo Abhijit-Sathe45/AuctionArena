@@ -32,7 +32,7 @@ export default function Teams() {
     setEdits((prev) => {
       const merged = {};
       data.forEach((t) => {
-        merged[t._id] = prev[t._id] || { isApproved: t.isApproved };
+        merged[t._id] = prev[t._id] || { isApproved: t.isApproved, biddingPin: t.biddingPin || "" };
       });
       return merged;
     });
@@ -67,7 +67,7 @@ export default function Teams() {
   }, []);
 
   function getEdit(teamId) {
-    return edits[teamId] || { isApproved: false };
+    return edits[teamId] || { isApproved: false, biddingPin: "" };
   }
   function setEdit(teamId, patch) {
     setEdits((prev) => ({
@@ -76,15 +76,18 @@ export default function Teams() {
     }));
   }
   function isDirty(team) {
-    return getEdit(team._id).isApproved !== team.isApproved;
+    const e = getEdit(team._id);
+    return e.isApproved !== team.isApproved || (e.biddingPin && e.biddingPin !== team.biddingPin);
   }
 
   async function saveRow(team) {
     setStatus({ type: "", message: "" });
     setSavingId(team._id);
     try {
+      const e = getEdit(team._id);
       await api.put(`/organizer-admin/teams/${team._id}`, {
-        isApproved: getEdit(team._id).isApproved,
+        isApproved: e.isApproved,
+        biddingPin: e.biddingPin,
       });
       showToast(`Saved changes for ${team.teamName}.`, "success");
       await load();
@@ -141,21 +144,21 @@ export default function Teams() {
 
   return (
     <OrganizerLayout>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display text-3xl text-turf">Teams</h1>
-          <p className="text-black/50">
+          <h1 className="font-display text-2xl sm:text-3xl text-turf">Teams</h1>
+          <p className="text-black/50 text-xs sm:text-sm mt-0.5">
             Approve teams and manage owners before auction starts. Nothing is
             saved until you click Save. Updates live as teams register.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => setShowAdd((s) => !s)}>
-          {showAdd ? "Cancel" : "+ Add Team Manually"}
+        <button className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto shrink-0" onClick={() => setShowAdd((s) => !s)}>
+          {showAdd ? "✕ Cancel" : "+ Add Team Manually"}
         </button>
       </div>
 
       {showAdd && (
-        <form onSubmit={addTeam} className="card mb-4 grid grid-cols-2 gap-3">
+        <form onSubmit={addTeam} className="card mb-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input
             required
             placeholder="Owner Name"
@@ -180,9 +183,10 @@ export default function Teams() {
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
           />
-          <label className="flex items-center gap-2 text-sm">
+          <label className="flex items-center gap-2 text-xs sm:text-sm p-1">
             <input
               type="checkbox"
+              className="w-4 h-4 rounded text-turf accent-turf"
               checked={form.ownerPlaysMatch}
               onChange={(e) =>
                 setForm((f) => ({ ...f, ownerPlaysMatch: e.target.checked }))
@@ -190,17 +194,17 @@ export default function Teams() {
             />
             Owner also plays
           </label>
-          <button className="btn-secondary col-span-2">Add Team</button>
+          <button className="btn-secondary col-span-1 sm:col-span-2 py-2.5">Add Team</button>
         </form>
       )}
 
       {dirtyCount > 0 && (
-        <div className="flex items-center justify-between bg-gold/10 border border-gold/40 rounded-lg px-4 py-3 mb-3">
-          <p className="text-sm font-medium text-gold-dark">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-gold/10 border border-gold/40 rounded-xl px-4 py-3 mb-3">
+          <p className="text-xs sm:text-sm font-semibold text-gold-dark">
             {dirtyCount} team{dirtyCount > 1 ? "s have" : " has"} unsaved
             changes
           </p>
-          <button onClick={saveAll} className="btn-primary text-sm py-1.5 px-4">
+          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto">
             💾 Save All Changes
           </button>
         </div>
@@ -211,17 +215,18 @@ export default function Teams() {
       {loading ? (
         <SkeletonTable rows={5} cols={7} />
       ) : (
-        <div className="card overflow-x-auto mt-3">
-          <table className="w-full text-sm">
+        <div className="card overflow-x-auto mt-3 scroll-touch">
+          <table className="w-full text-xs sm:text-sm min-w-[620px]">
             <thead>
               <tr className="text-left text-black/50 border-b border-black/10">
-                <th className="py-2 pr-3">Team</th>
-                <th className="py-2 pr-3">Owner</th>
-                <th className="py-2 pr-3">Plays?</th>
-                <th className="py-2 pr-3">Payment</th>
-                <th className="py-2 pr-3">Approved</th>
-                <th className="py-2 pr-3">Purse Remaining</th>
-                <th className="py-2 pr-3"></th>
+                <th className="py-2.5 pr-3">Team</th>
+                <th className="py-2.5 pr-3">Owner</th>
+                <th className="py-2.5 pr-3">Plays?</th>
+                <th className="py-2.5 pr-3">Payment</th>
+                <th className="py-2.5 pr-3">Approved</th>
+                <th className="py-2.5 pr-3">Bidding PIN</th>
+                <th className="py-2.5 pr-3">Purse Remaining</th>
+                <th className="py-2.5 pr-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -263,11 +268,34 @@ export default function Teams() {
                       />
                     </td>
                     <td className="py-2 pr-3">
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          maxLength={6}
+                          className="input-field py-0.5 px-2 text-xs font-mono font-bold w-16 text-center"
+                          value={e.biddingPin || ""}
+                          onChange={(ev) => setEdit(t._id, { biddingPin: ev.target.value })}
+                          title="4-digit secret bidding PIN"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(e.biddingPin || t.biddingPin);
+                            showToast(`Copied PIN ${e.biddingPin || t.biddingPin} for ${t.teamName}`, "success");
+                          }}
+                          className="text-[11px] p-1 rounded bg-black/5 hover:bg-black/10 text-black/70"
+                          title="Copy PIN"
+                        >
+                          📋
+                        </button>
+                      </div>
+                    </td>
+                    <td className="py-2 pr-3">
                       Rs. {t.purseRemaining?.toLocaleString("en-IN")} /{" "}
                       {t.totalPurse?.toLocaleString("en-IN")}
                     </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                    <td className="py-2.5 pr-3 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => saveRow(t)}
                           disabled={!dirty || savingId === t._id}
@@ -277,7 +305,7 @@ export default function Teams() {
                         </button>
                         <button
                           onClick={() => deleteTeam(t._id)}
-                          className="text-clay text-xs hover:underline"
+                          className="text-clay text-xs hover:underline px-1.5 py-1"
                         >
                           Remove
                         </button>

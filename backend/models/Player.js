@@ -34,5 +34,6 @@ const playerSchema = new mongoose.Schema({
 // Speeds up the most frequent live-auction queries: "pending, approved players in category X"
 playerSchema.index({ organizer: 1, category: 1, auctionStatus: 1 });
 playerSchema.index({ organizer: 1, auctionStatus: 1 });
+playerSchema.index({ organizer: 1, soldTo: 1 });
 
 module.exports = mongoose.model('Player', playerSchema);

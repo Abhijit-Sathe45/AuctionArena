@@ -22,6 +22,15 @@ const auctionStateSchema = new mongoose.Schema({
   // then works through that queue one player at a time before moving to the next category.
   currentCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   playerQueue: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Player' }],
+
+  // Live auction countdown state
+  countdownEnabled: { type: Boolean, default: false },
+  countdownDuration: { type: Number, default: 60 },
+  biddingStartedAt: { type: Date, default: null },
+  biddingEndsAt: { type: Date, default: null },
+
+  // Teams that clicked "Pass" for the current player
+  passedTeams: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Team' }],
 }, { timestamps: true });
 
 module.exports = mongoose.model('AuctionState', auctionStateSchema);

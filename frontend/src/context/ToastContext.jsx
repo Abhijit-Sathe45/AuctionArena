@@ -55,17 +55,18 @@ const STYLES = {
 function ToastViewport({ toasts, onDismiss }) {
   if (toasts.length === 0) return null;
   return (
-    <div className="fixed bottom-4 right-4 z-[999] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    <div className="fixed bottom-3 right-3 left-3 sm:left-auto sm:right-4 sm:bottom-4 z-[999] flex flex-col gap-2 max-w-sm pointer-events-none">
       {toasts.map((t) => (
         <div
           key={t.id}
           role="status"
-          className={`pointer-events-auto flex items-start justify-between gap-3 border rounded-lg shadow-lg px-4 py-3 text-sm animate-[fadeIn_0.15s_ease-out] ${STYLES[t.type] || STYLES.info}`}
+          className={`pointer-events-auto flex items-start justify-between gap-3 border rounded-xl shadow-xl px-4 py-3 text-sm animate-[fadeIn_0.15s_ease-out] ${STYLES[t.type] || STYLES.info}`}
         >
           <span className="flex-1">{t.message}</span>
           <button
             onClick={() => onDismiss(t.id)}
-            className="opacity-70 hover:opacity-100 leading-none text-base"
+            className="opacity-70 hover:opacity-100 leading-none text-lg p-1 -mr-1"
+            aria-label="Dismiss toast"
           >
             ×
           </button>

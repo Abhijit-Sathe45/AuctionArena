@@ -1,19 +1,38 @@
+const fs = require('fs');
 const Team = require('../models/Team');
 const Player = require('../models/Player');
 const Organizer = require('../models/Organizer');
 const { generateTeamSummaryPDF, generateAuctionHistoryPDF } = require('../utils/pdfGenerator');
 
+function safeUnlink(filepath) {
+  if (!filepath) return;
+  fs.unlink(filepath, (err) => {
+    if (err && err.code !== 'ENOENT') {
+      console.error('Error removing temporary PDF file:', err);
+    }
+  });
+}
+
 // GET /api/pdf/team/:teamId
 async function downloadTeamPDF(req, res) {
+  let filepath = null;
   try {
     const organizer = await Organizer.findById(req.user.id);
     const team = await Team.findOne({ _id: req.params.teamId, organizer: req.user.id });
     if (!team) return res.status(404).json({ message: 'Team not found' });
     const players = await Player.find({ organizer: req.user.id, soldTo: team._id });
 
-    const filepath = await generateTeamSummaryPDF({ organizerName: organizer.tournamentName, team, players });
-    res.download(filepath, `${team.teamName.replace(/\s+/g, '_')}_summary.pdf`);
+    filepath = await generateTeamSummaryPDF({ organizerName: organizer.tournamentName, team, players });
+    const downloadFilename = `${team.teamName.replace(/\s+/g, '_')}_summary.pdf`;
+
+    res.download(filepath, downloadFilename, (err) => {
+      if (err && !res.headersSent) {
+        console.error('Download transmission error:', err);
+      }
+      safeUnlink(filepath);
+    });
   } catch (err) {
+    if (filepath) safeUnlink(filepath);
     console.error(err);
     res.status(500).json({ message: 'Failed to generate PDF' });
   }
@@ -32,13 +51,23 @@ async function downloadAllTeamsInfo(req, res) {
 
 // GET /api/pdf/history
 async function downloadHistoryPDF(req, res) {
+  let filepath = null;
   try {
     const organizer = await Organizer.findById(req.user.id);
     const players = await Player.find({ organizer: req.user.id });
     const teams = await Team.find({ organizer: req.user.id });
-    const filepath = await generateAuctionHistoryPDF({ organizerName: organizer.tournamentName, players, teams });
-    res.download(filepath, `${organizer.tournamentName.replace(/\s+/g, '_')}_auction_history.pdf`);
+
+    filepath = await generateAuctionHistoryPDF({ organizerName: organizer.tournamentName, players, teams });
+    const downloadFilename = `${organizer.tournamentName.replace(/\s+/g, '_')}_auction_history.pdf`;
+
+    res.download(filepath, downloadFilename, (err) => {
+      if (err && !res.headersSent) {
+        console.error('Download transmission error:', err);
+      }
+      safeUnlink(filepath);
+    });
   } catch (err) {
+    if (filepath) safeUnlink(filepath);
     console.error(err);
     res.status(500).json({ message: 'Failed to generate PDF' });
   }

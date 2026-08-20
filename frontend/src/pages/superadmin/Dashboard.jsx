@@ -132,15 +132,15 @@ export default function SuperAdminDashboard() {
   const dirtyPlanCount = plans.filter(isPlanDirty).length;
 
   return (
-    <div className="min-h-screen bg-ivory p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-ivory p-3.5 sm:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="font-display text-3xl text-turf">Super Admin Panel</h1>
-          <p className="text-black/50 text-sm">
+          <h1 className="font-display text-2xl sm:text-3xl text-turf">Super Admin Panel</h1>
+          <p className="text-black/50 text-xs sm:text-sm">
             Manage software pricing and organizer accounts.
           </p>
         </div>
-        <button onClick={handleLogout} className="btn-secondary">
+        <button onClick={handleLogout} className="btn-secondary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto shrink-0">
           Log out
         </button>
       </div>
@@ -148,23 +148,23 @@ export default function SuperAdminDashboard() {
       <StatusMessage type={status.type} message={status.message} />
 
       <div className="card mb-6 mt-3">
-        <div className="flex items-center justify-between mb-1">
-          <h2 className="font-semibold">Software Pricing Plans</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
+          <h2 className="font-semibold text-sm sm:text-base">Software Pricing Plans</h2>
           {dirtyPlanCount > 0 && (
-            <span className="badge-unsaved">● {dirtyPlanCount} unsaved</span>
+            <span className="badge-unsaved self-start sm:self-auto">● {dirtyPlanCount} unsaved</span>
           )}
         </div>
         <p className="text-xs text-black/40 mb-3">
           Changes are not applied until you click Save on each plan.
         </p>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {plans.map((plan) => {
             const e = getPlanEdit(plan._id);
             const dirty = isPlanDirty(plan);
             return (
               <div
                 key={plan._id}
-                className={`border-2 rounded-lg p-4 transition-colors ${dirty ? "border-gold bg-gold/5" : "border-black/10"}`}
+                className={`border-2 rounded-xl p-3.5 sm:p-4 transition-colors ${dirty ? "border-gold bg-gold/5" : "border-black/10"}`}
               >
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold text-sm">{plan.label}</p>
@@ -191,7 +191,7 @@ export default function SuperAdminDashboard() {
                 <button
                   onClick={() => savePlan(plan)}
                   disabled={!dirty || savingPlanId === plan._id}
-                  className="btn-primary text-sm w-full disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-primary text-xs sm:text-sm w-full py-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {savingPlanId === plan._id
                     ? "⏳ Saving…"
@@ -203,29 +203,29 @@ export default function SuperAdminDashboard() {
             );
           })}
           {plans.length === 0 && (
-            <p className="text-black/40 text-sm col-span-3">
+            <p className="text-black/40 text-sm col-span-full">
               No pricing plans found.
             </p>
           )}
         </div>
       </div>
 
-      <div className="card overflow-x-auto">
-        <h2 className="font-semibold mb-3">Organizers</h2>
+      <div className="card overflow-x-auto scroll-touch">
+        <h2 className="font-semibold text-sm sm:text-base mb-1">Organizers</h2>
         <p className="text-xs text-black/40 mb-3">
           An organizer must be suspended before they can be permanently deleted
           — this is a safety gate against accidentally wiping an active
           tournament's data.
         </p>
-        <table className="w-full text-sm">
+        <table className="w-full text-xs sm:text-sm min-w-[680px]">
           <thead>
             <tr className="text-left text-black/50 border-b border-black/10">
-              <th className="py-2 pr-3">Tournament</th>
-              <th className="py-2 pr-3">Organizer</th>
-              <th className="py-2 pr-3">Plan</th>
-              <th className="py-2 pr-3">Status</th>
-              <th className="py-2 pr-3">Expiry</th>
-              <th className="py-2 pr-3"></th>
+              <th className="py-2.5 pr-3">Tournament</th>
+              <th className="py-2.5 pr-3">Organizer</th>
+              <th className="py-2.5 pr-3">Plan</th>
+              <th className="py-2.5 pr-3">Status</th>
+              <th className="py-2.5 pr-3">Expiry</th>
+              <th className="py-2.5 pr-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -254,22 +254,22 @@ export default function SuperAdminDashboard() {
                     ? new Date(o.passExpiryDate).toLocaleDateString("en-IN")
                     : "—"}
                 </td>
-                <td className="py-2 pr-3">
-                  <div className="flex items-center gap-2">
+                <td className="py-2.5 pr-3 whitespace-nowrap text-right">
+                  <div className="flex items-center justify-end gap-2">
                     <button onClick={() => extend(o._id)} className="btn-save">
                       ⏱ Extend
                     </button>
                     {o.status === "SUSPENDED" ? (
                       <button
                         onClick={() => reactivate(o._id)}
-                        className="text-green-700 text-xs font-semibold hover:underline"
+                        className="text-green-700 text-xs font-semibold hover:underline px-1.5 py-1"
                       >
                         Reactivate
                       </button>
                     ) : (
                       <button
                         onClick={() => suspend(o._id)}
-                        className="text-clay text-xs font-semibold hover:underline"
+                        className="text-clay text-xs font-semibold hover:underline px-1.5 py-1"
                       >
                         Suspend
                       </button>
@@ -277,7 +277,7 @@ export default function SuperAdminDashboard() {
                     {o.status === "SUSPENDED" && (
                       <button
                         onClick={() => deleteOrganizer(o)}
-                        className="text-red-700 text-xs font-semibold hover:underline"
+                        className="text-red-700 text-xs font-semibold hover:underline px-1.5 py-1"
                       >
                         🗑 Delete
                       </button>

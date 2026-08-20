@@ -66,7 +66,7 @@ export default function Dashboard() {
       {loading ? (
         <SkeletonStatCards count={4} />
       ) : (
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4 mb-6">
           <StatCard label="Total Players" value={data?.totalPlayers ?? "—"} />
           <StatCard
             label="Sold"
@@ -86,7 +86,7 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-6">
         <LinkCard title="Player Registration Link" link={registerLinkPlayer} />
         <LinkCard title="Team Registration Link" link={registerLinkTeam} />
         <LinkCard
@@ -100,12 +100,12 @@ export default function Dashboard() {
       {loading ? (
         <SkeletonCards count={3} />
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {data?.teams?.map((t) => (
             <PurseBar key={t.id} team={t} />
           ))}
           {data?.teams?.length === 0 && (
-            <p className="text-black/40 text-sm">No teams registered yet.</p>
+            <p className="text-black/40 text-sm col-span-full">No teams registered yet.</p>
           )}
         </div>
       )}
@@ -115,9 +115,9 @@ export default function Dashboard() {
 
 function StatCard({ label, value, color = "text-turf" }) {
   return (
-    <div className="card text-center">
-      <p className={`text-3xl font-display ${color}`}>{value}</p>
-      <p className="text-xs text-black/50 mt-1">{label}</p>
+    <div className="card text-center p-3 sm:p-5">
+      <p className={`text-2xl sm:text-3xl font-display ${color}`}>{value}</p>
+      <p className="text-[11px] sm:text-xs text-black/60 mt-1">{label}</p>
     </div>
   );
 }
@@ -125,30 +125,30 @@ function StatCard({ label, value, color = "text-turf" }) {
 function LinkCard({ title, link, highlight = false }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className={`card ${highlight ? "border-2 border-gold" : ""}`}>
+    <div className={`card ${highlight ? "border-2 border-gold shadow-md" : ""}`}>
       <p className="text-sm font-semibold mb-2">{title}</p>
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 sm:gap-2">
         <input
           readOnly
-          className="input-field text-xs"
+          className="input-field text-xs min-w-0 flex-1 px-2.5 py-1.5"
           value={link}
           onFocus={(e) => e.target.select()}
         />
         <button
-          className="btn-secondary text-sm shrink-0"
+          className="btn-secondary text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 shrink-0"
           onClick={() => {
             navigator.clipboard.writeText(link);
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
           }}
         >
-          {copied ? "Copied!" : "Copy"}
+          {copied ? "✓ Copied" : "Copy"}
         </button>
         <a
           href={link}
           target="_blank"
           rel="noopener noreferrer"
-          className="btn-primary text-sm shrink-0 inline-flex items-center"
+          className="btn-primary text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 shrink-0 inline-flex items-center"
         >
           Open
         </a>

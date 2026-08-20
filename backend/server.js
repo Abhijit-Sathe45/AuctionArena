@@ -20,11 +20,18 @@ const auctionRoutes = require('./routes/auctionRoutes');
 const pdfRoutes = require('./routes/pdfRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const registerAuctionSocketHandlers = require('./socket/auctionSocket');
+const auctionTimerService = require('./services/auctionTimerService');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: '*' } });
+const io = new Server(server, {
+  cors: { origin: '*' },
+  transports: ['websocket', 'polling'],
+  pingTimeout: 10000,
+  pingInterval: 5000,
+});
 app.set('io', io);
+auctionTimerService.setIo(io);
 
 // Safety net: log unexpected async errors instead of letting them crash the whole server.
 // With asyncHandler wrapping every route, this should rarely fire — but it protects against
@@ -74,6 +81,7 @@ async function start() {
   await connectDB();
   await bootstrapSuperAdmin();
   startExpiryCron();
+  await auctionTimerService.recoverActiveTimers();
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 

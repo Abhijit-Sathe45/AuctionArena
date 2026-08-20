@@ -30,6 +30,13 @@ const auctionSettingsSchema = new mongoose.Schema({
   // Registration open/close toggles (auto-closes when max reached, but organizer can also force close)
   playerRegistrationOpen: { type: Boolean, default: true },
   teamRegistrationOpen: { type: Boolean, default: true },
+
+  // Auction countdown settings
+  countdownEnabled: { type: Boolean, default: false },
+  countdownDuration: { type: Number, default: 60 }, // in seconds
+
+  // Team owner remote mobile bidding (/bid/:slug)
+  teamOwnerBiddingEnabled: { type: Boolean, default: false },
 }, { timestamps: true });
 
 module.exports = mongoose.model('AuctionSettings', auctionSettingsSchema);

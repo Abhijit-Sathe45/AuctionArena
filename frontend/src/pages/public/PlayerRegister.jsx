@@ -88,7 +88,7 @@ export default function PlayerRegister() {
           <input required className="input-field" value={form.name} onChange={e => update('name', e.target.value)} />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="label-text">Batting Style</label>
             <select className="input-field" value={form.battingStyle} onChange={e => update('battingStyle', e.target.value)}>
@@ -106,7 +106,7 @@ export default function PlayerRegister() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="label-text">Player Type</label>
             <select className="input-field" value={form.playerType} onChange={e => update('playerType', e.target.value)}>
@@ -129,12 +129,14 @@ export default function PlayerRegister() {
         <ImageUpload label="Your Photo" onUploaded={(url) => update('photoUrl', url)} />
 
         {info.playerRegistrationFee > 0 && (
-          <p className="text-sm text-turf font-medium">Registration Fee: Rs. {info.playerRegistrationFee}</p>
+          <p className="text-sm text-turf font-semibold bg-gold/15 px-3 py-2 rounded-lg text-center">
+            Registration Fee: Rs. {info.playerRegistrationFee}
+          </p>
         )}
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full">
+        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3">
           {submitting ? 'Processing…' : info.playerRegistrationFee > 0 ? `Pay Rs. ${info.playerRegistrationFee} & Register` : 'Register for Auction'}
         </button>
       </form>
@@ -143,5 +145,5 @@ export default function PlayerRegister() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
 }

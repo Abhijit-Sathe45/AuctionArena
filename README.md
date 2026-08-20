@@ -24,7 +24,7 @@ run their own player/team registration and live auction using this platform.
 - Admin sets registration fees, max players/teams — registration link auto-closes with a friendly message once full
 - Admin can view all registered players/teams and approve them before auction
 - **Downloadable PDF reports**: one PDF per team (squad + prices + bonus points) and one full auction-history PDF
-- Organizer signup flow: tournament name/date/organizer name/logo + Razorpay payment across 3 pass tiers → auto-generated Login ID & password
+- Organizer signup flow: tournament name/date/organizer name/logo + custom password & verification + Razorpay payment across 3 pass tiers
 - Super Admin sets the 3 pass prices
 - Pass expiry is enforced automatically (hourly cron job) — once expired, the organizer can only see a "renew your pass" screen
 
@@ -100,8 +100,8 @@ Visit `http://localhost:5173`.
 ### 3. Typical flow to try it end-to-end
 
 1. Go to `/super-admin/login`, log in with your `.env` credentials, set pricing if you want to change the defaults.
-2. Go to `/get-started`, fill the organizer signup form, choose a pass, and pay (use Razorpay test card `4111 1111 1111 1111`, any future expiry/CVV).
-3. Note the Login ID & password shown, then log in at `/organizer/login`.
+2. Go to `/get-started`, fill the organizer signup form (enter your custom password and confirm it), choose a pass, and pay (use Razorpay test card `4111 1111 1111 1111`, any future expiry/CVV).
+3. Log in at `/organizer/login` using your email and chosen password.
 4. In the organizer dashboard, copy the **Player** and **Team registration links** and open them in a new tab to register a few test players/teams (registration fee can be set to 0 in Settings to skip payment during testing).
 5. Approve the players/teams in the **Players** / **Teams** tabs, assign categories & base prices.
 6. Go to **Live Auction**, click "Start Next Player", place bids for different teams, then Mark Sold/Unsold.

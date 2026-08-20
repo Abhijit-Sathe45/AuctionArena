@@ -12,22 +12,22 @@ function slugify(text) {
 function genLoginId(email) {
   return email.toLowerCase().trim();
 }
-// Password is the tournament name (letters/numbers only, no spaces) + a random 4-digit number,
-// e.g. tournament "Yara Cricket Cup" -> "YaraCricketCup4821". Easy to remember, still hard to guess.
-function genPassword(tournamentName) {
-  const namePart = tournamentName.replace(/[^a-zA-Z0-9]+/g, '');
-  const numberPart = Math.floor(1000 + Math.random() * 9000); // 4-digit random number
-  return `${namePart}${numberPart}`;
-}
-
 // STEP 1 — POST /api/organizer-signup/initiate
-// Body: tournamentName, tournamentDate, organizerName, email, phone, planType, logoUrl(optional, from upload endpoint)
+// Body: tournamentName, tournamentDate, organizerName, email, phone, planType, logoUrl(optional), password, confirmPassword
 async function initiateSignup(req, res) {
   try {
-    const { tournamentName, tournamentDate, organizerName, email, phone, planType, logoUrl } = req.body;
+    const { tournamentName, tournamentDate, organizerName, email, phone, planType, logoUrl, password, confirmPassword } = req.body;
 
     if (!tournamentName || !tournamentDate || !organizerName || !email || !planType) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (!password || typeof password !== 'string' || password.trim().length < 6) {
+      return res.status(400).json({ message: 'Password is required and must be at least 6 characters long.' });
+    }
+
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return res.status(400).json({ message: 'Passwords do not match.' });
     }
 
     const plan = await PricingPlan.findOne({ planType, isActive: true });
@@ -40,8 +40,7 @@ async function initiateSignup(req, res) {
 
     const slug = slugify(tournamentName);
     const loginId = genLoginId(email);
-    const rawPassword = genPassword(tournamentName);
-    const hashedPassword = await bcrypt.hash(rawPassword, 10);
+    const hashedPassword = await bcrypt.hash(password.trim(), 10);
 
     const organizer = existing || new Organizer({});
     Object.assign(organizer, {
@@ -81,7 +80,6 @@ async function initiateSignup(req, res) {
         activatedImmediately: true,
         loginId: organizer.loginId,
         slug: organizer.slug,
-        rawPasswordPreview: rawPassword,
       });
     }
 
@@ -91,7 +89,8 @@ async function initiateSignup(req, res) {
       organizerId: organizer._id,
       razorpayOrder: order,
       amount: plan.price,
-      rawPasswordPreview: rawPassword, // shown once so organizer can note it down; also confirmed after payment success
+      loginId: organizer.loginId,
+      slug: organizer.slug,
     });
   } catch (err) {
     console.error(err);

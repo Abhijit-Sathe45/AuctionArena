@@ -172,17 +172,17 @@ export default function Players() {
 
   return (
     <OrganizerLayout>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display text-3xl text-turf">Players</h1>
-          <p className="text-black/50">
+          <h1 className="font-display text-2xl sm:text-3xl text-turf">Players</h1>
+          <p className="text-black/50 text-xs sm:text-sm mt-0.5">
             Approve registrations, assign categories & base prices before
             auction. If a player's photo shows the fallback icon, click "Change"
             to upload a replacement. Nothing is saved until you click Save.
           </p>
         </div>
         <select
-          className="input-field w-44"
+          className="input-field w-full sm:w-44 shrink-0"
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         >
@@ -194,12 +194,12 @@ export default function Players() {
       </div>
 
       {dirtyCount > 0 && (
-        <div className="flex items-center justify-between bg-gold/10 border border-gold/40 rounded-lg px-4 py-3 mb-3">
-          <p className="text-sm font-medium text-gold-dark">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-gold/10 border border-gold/40 rounded-xl px-4 py-3 mb-3">
+          <p className="text-xs sm:text-sm font-semibold text-gold-dark">
             {dirtyCount} player{dirtyCount > 1 ? "s have" : " has"} unsaved
             changes
           </p>
-          <button onClick={saveAll} className="btn-primary text-sm py-1.5 px-4">
+          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto">
             💾 Save All Changes
           </button>
         </div>
@@ -210,20 +210,20 @@ export default function Players() {
       {loading ? (
         <SkeletonTable rows={6} cols={10} />
       ) : (
-        <div className="card overflow-x-auto mt-3">
-          <table className="w-full text-sm">
+        <div className="card overflow-x-auto mt-3 scroll-touch">
+          <table className="w-full text-xs sm:text-sm min-w-[740px]">
             <thead>
               <tr className="text-left text-black/50 border-b border-black/10">
-                <th className="py-2 pr-3">Photo</th>
-                <th className="py-2 pr-3">Name</th>
-                <th className="py-2 pr-3">Type</th>
-                <th className="py-2 pr-3">Age</th>
-                <th className="py-2 pr-3">Payment</th>
-                <th className="py-2 pr-3">Approved</th>
-                <th className="py-2 pr-3">Category</th>
-                <th className="py-2 pr-3">Base Price</th>
-                <th className="py-2 pr-3">Auction Status</th>
-                <th className="py-2 pr-3"></th>
+                <th className="py-2.5 pr-3">Photo</th>
+                <th className="py-2.5 pr-3">Name</th>
+                <th className="py-2.5 pr-3">Type</th>
+                <th className="py-2.5 pr-3">Age</th>
+                <th className="py-2.5 pr-3">Payment</th>
+                <th className="py-2.5 pr-3">Approved</th>
+                <th className="py-2.5 pr-3">Category</th>
+                <th className="py-2.5 pr-3">Base Price</th>
+                <th className="py-2.5 pr-3">Auction Status</th>
+                <th className="py-2.5 pr-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -330,8 +330,8 @@ export default function Players() {
                         {p.auctionStatus}
                       </span>
                     </td>
-                    <td className="py-2 pr-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
+                    <td className="py-2.5 pr-3 whitespace-nowrap text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <button
                           onClick={() => saveRow(p)}
                           disabled={!dirty || savingId === p._id}
@@ -341,7 +341,7 @@ export default function Players() {
                         </button>
                         <button
                           onClick={() => deletePlayer(p._id)}
-                          className="text-clay text-xs hover:underline"
+                          className="text-clay text-xs hover:underline px-1.5 py-1"
                         >
                           Remove
                         </button>

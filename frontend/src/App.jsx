@@ -16,6 +16,8 @@ const PlayerRegister = lazy(() => import("./pages/public/PlayerRegister"));
 const TeamRegister = lazy(() => import("./pages/public/TeamRegister"));
 const BuySoftware = lazy(() => import("./pages/public/BuySoftware"));
 const WatchLive = lazy(() => import("./pages/public/WatchLive"));
+const HowToUse = lazy(() => import("./pages/public/HowToUse"));
+const TeamBidRemote = lazy(() => import("./pages/public/TeamBidRemote"));
 
 const OrganizerLogin = lazy(() => import("./pages/organizer/Login"));
 const RenewPass = lazy(() => import("./pages/organizer/RenewPass"));
@@ -26,6 +28,7 @@ const Categories = lazy(() => import("./pages/organizer/Categories"));
 const Settings = lazy(() => import("./pages/organizer/Settings"));
 const LiveAuction = lazy(() => import("./pages/organizer/LiveAuction"));
 const History = lazy(() => import("./pages/organizer/History"));
+const OrganizerHowToUse = lazy(() => import("./pages/organizer/HowToUse"));
 
 const SuperAdminLogin = lazy(() => import("./pages/superadmin/Login"));
 const SuperAdminDashboard = lazy(() => import("./pages/superadmin/Dashboard"));
@@ -46,13 +49,23 @@ export default function App() {
           <Routes>
             {/* Public */}
             <Route path="/" element={<Home />} />
+            <Route path="/how-to-use" element={<HowToUse />} />
             <Route path="/get-started" element={<BuySoftware />} />
             <Route path="/register/player/:slug" element={<PlayerRegister />} />
             <Route path="/register/team/:slug" element={<TeamRegister />} />
             <Route path="/watch/:slug" element={<WatchLive />} />
+            <Route path="/bid/:slug" element={<TeamBidRemote />} />
 
             {/* Organizer */}
             <Route path="/organizer/login" element={<OrganizerLogin />} />
+            <Route
+              path="/organizer/how-to-use"
+              element={
+                <ProtectedRoute tokenKey="organizerToken">
+                  <OrganizerHowToUse />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/organizer/renew"
               element={

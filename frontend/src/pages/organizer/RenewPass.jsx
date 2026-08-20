@@ -38,20 +38,20 @@ export default function RenewPass() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-clay/5 to-ivory p-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-clay/5 to-ivory p-3.5 sm:p-6 py-8 sm:py-12">
       <div className="card max-w-md w-full space-y-4 text-center">
-        <h1 className="font-display text-3xl text-clay">Your Pass Has Expired</h1>
-        <p className="text-black/60 text-sm">Renew now to regain full access to your auction dashboard, live auction tools, and registration links.</p>
-        <div className="grid grid-cols-3 gap-3">
+        <h1 className="font-display text-2xl sm:text-3xl text-clay">Your Pass Has Expired</h1>
+        <p className="text-black/60 text-xs sm:text-sm">Renew now to regain full access to your auction dashboard, live auction tools, and registration links.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
           {PLANS.map(p => (
             <button key={p.planType} onClick={() => setSelectedPlan(p.planType)}
-              className={`border rounded-lg p-3 text-sm font-medium ${selectedPlan === p.planType ? 'border-gold bg-gold/10' : 'border-black/10'}`}>
+              className={`border-2 rounded-xl p-3 text-sm font-medium transition-colors active:scale-[0.98] ${selectedPlan === p.planType ? 'border-gold bg-gold/10 font-semibold' : 'border-black/10 hover:border-black/25'}`}>
               {p.label}
             </button>
           ))}
         </div>
         <StatusMessage type={status.type} message={status.message} />
-        <button onClick={handleRenew} disabled={submitting} className="btn-primary w-full">
+        <button onClick={handleRenew} disabled={submitting} className="btn-primary w-full py-3 text-base">
           {submitting ? 'Processing…' : 'Renew Pass'}
         </button>
       </div>

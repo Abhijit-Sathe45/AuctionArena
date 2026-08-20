@@ -26,7 +26,18 @@ const teamSchema = new mongoose.Schema({
     grantedAt: { type: Date, default: Date.now },
   }],
 
+  // Secret 4-digit PIN for mobile bidding remote (/bid/:slug)
+  biddingPin: { type: String, default: null },
+
   isApproved: { type: Boolean, default: false }, // admin approves registered teams before auction
 }, { timestamps: true });
+
+// Auto-generate a 4-digit PIN if not already set
+teamSchema.pre('save', function(next) {
+  if (!this.biddingPin) {
+    this.biddingPin = Math.floor(1000 + Math.random() * 9000).toString();
+  }
+  next();
+});
 
 module.exports = mongoose.model('Team', teamSchema);

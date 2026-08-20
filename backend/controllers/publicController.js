@@ -197,6 +197,7 @@ async function getLiveAuctionSpectatorView(req, res) {
       state: state || null,
       teams,
       recentSales,
+      serverTime: Date.now(),
     });
   } catch (err) {
     console.error(err);
@@ -204,7 +205,146 @@ async function getLiveAuctionSpectatorView(req, res) {
   }
 }
 
+// GET /api/public/:slug/teams-list  -> for team remote login page (/bid/:slug)
+async function getTeamsListForRemote(req, res) {
+  try {
+    const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
+    if (!organizer) return res.status(404).json({ message: 'Tournament not found or inactive' });
+
+    const settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    const teams = await Team.find({ organizer: organizer._id, isApproved: true })
+      .select('teamName teamLogoUrl ownerName');
+
+    res.json({
+      tournamentName: organizer.tournamentName,
+      logoUrl: organizer.logoUrl,
+      organizerId: organizer._id,
+      teamOwnerBiddingEnabled: !!settings?.teamOwnerBiddingEnabled,
+      teams,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error fetching teams list' });
+  }
+}
+
+// POST /api/public/:slug/team-login  -> 4-digit PIN login for team owners
+async function teamLogin(req, res) {
+  try {
+    const { teamId, pin } = req.body;
+    if (!teamId || !pin) {
+      return res.status(400).json({ message: 'Please select a team and enter 4-digit PIN' });
+    }
+
+    const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
+    if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
+
+    const settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    if (!settings?.teamOwnerBiddingEnabled) {
+      return res.status(403).json({ message: 'Team owner mobile bidding is currently disabled by the tournament organizer.' });
+    }
+
+    const team = await Team.findOne({ _id: teamId, organizer: organizer._id, isApproved: true });
+    if (!team) {
+      return res.status(404).json({ message: 'Team not found or not approved' });
+    }
+
+    if (!team.biddingPin || team.biddingPin.trim() !== pin.toString().trim()) {
+      return res.status(401).json({ message: 'Invalid 4-digit PIN for ' + team.teamName });
+    }
+
+    const generateToken = require('../utils/generateToken');
+    const token = generateToken({
+      id: team._id,
+      teamId: team._id,
+      organizerId: organizer._id,
+      role: 'TEAM_OWNER',
+    });
+
+    res.json({
+      token,
+      team: {
+        _id: team._id,
+        teamName: team.teamName,
+        teamLogoUrl: team.teamLogoUrl,
+        ownerName: team.ownerName,
+        totalPurse: team.totalPurse,
+        purseRemaining: team.purseRemaining,
+      },
+      tournamentName: organizer.tournamentName,
+      logoUrl: organizer.logoUrl,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error during team login' });
+  }
+}
+
+// GET /api/public/:slug/team-remote-state -> live status & purse shield for logged-in team owner
+async function getTeamRemoteState(req, res) {
+  try {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No authorization token' });
+    }
+
+    const jwt = require('jsonwebtoken');
+    const { JWT_SECRET } = require('../config');
+    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
+
+    if (decoded.role !== 'TEAM_OWNER' || !decoded.teamId) {
+      return res.status(403).json({ message: 'Invalid token for team remote' });
+    }
+
+    const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
+    if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
+
+    const [settings, state, team, squadCount] = await Promise.all([
+      AuctionSettings.findOne({ organizer: organizer._id }),
+      AuctionState.findOne({ organizer: organizer._id })
+        .populate('currentPlayer currentBidTeam currentCategory passedTeams'),
+      Team.findById(decoded.teamId),
+      Player.countDocuments({ organizer: organizer._id, soldTo: decoded.teamId }),
+    ]);
+
+    if (!team) return res.status(404).json({ message: 'Team not found' });
+
+    const minSquad = settings?.minPlayersPerTeam || 11;
+    const maxSquad = settings?.maxPlayersPerTeam || 15;
+    const slotsNeeded = Math.max(minSquad - squadCount, 0);
+    const minReserve = Math.max((slotsNeeded - 1) * 100, 0); // basic minimum buffer
+
+    const hasPassed = state?.passedTeams?.some(t => (t._id || t).toString() === team._id.toString());
+    const isHighestBidder = state?.currentBidTeam && ((state.currentBidTeam._id || state.currentBidTeam).toString() === team._id.toString());
+
+    res.json({
+      organizerId: organizer._id,
+      tournamentName: organizer.tournamentName,
+      logoUrl: organizer.logoUrl,
+      teamOwnerBiddingEnabled: !!settings?.teamOwnerBiddingEnabled,
+      team: {
+        _id: team._id,
+        teamName: team.teamName,
+        teamLogoUrl: team.teamLogoUrl,
+        ownerName: team.ownerName,
+        totalPurse: team.totalPurse,
+        purseRemaining: team.purseRemaining,
+        squadCount,
+        minSquad,
+        maxSquad,
+        minReserve,
+      },
+      state: state || null,
+      hasPassed: !!hasPassed,
+      isHighestBidder: !!isHighestBidder,
+      serverTime: Date.now(),
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(401).json({ message: 'Session expired or invalid' });
+  }
+}
+
 module.exports = {
   getTournamentInfo, registerPlayer, verifyPlayerPayment, registerTeam, verifyTeamPayment,
-  getLiveAuctionSpectatorView,
+  getLiveAuctionSpectatorView, getTeamsListForRemote, teamLogin, getTeamRemoteState,
 };
