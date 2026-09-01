@@ -50,15 +50,18 @@ export default function TeamRegister() {
     }
   }
 
-  if (loading) return <Center><p>Loading tournament details…</p></Center>;
+  if (loading) return <Center><p className="text-turf/70 font-medium">Loading tournament details…</p></Center>;
   if (!info) return <Center><StatusMessage type="error" message={status.message || 'Tournament not found.'} /></Center>;
 
   if (done) {
     return (
       <Center>
-        <div className="card max-w-md text-center">
-          <h2 className="font-display text-3xl text-turf mb-2">Team Registered! 🏆</h2>
-          <p className="text-black/70">Your team <strong>{form.teamName}</strong> is registered for <strong>{info.tournamentName}</strong>. Get ready for auction day!</p>
+        <div className="card max-w-md text-center shadow-lg border-mint/40">
+          <div className="w-16 h-16 bg-mint/20 text-mint rounded-2xl flex items-center justify-center mx-auto text-3xl mb-3 shadow-inner">
+            🏆
+          </div>
+          <h2 className="font-display text-3xl text-turf mb-2">Team Registered!</h2>
+          <p className="text-mauve-dark text-sm">Your team <strong>{form.teamName}</strong> is registered for <strong>{info.tournamentName}</strong>. Get ready for auction day!</p>
         </div>
       </Center>
     );
@@ -74,11 +77,11 @@ export default function TeamRegister() {
 
   return (
     <Center>
-      <form onSubmit={handleSubmit} className="card max-w-lg w-full space-y-4">
+      <form onSubmit={handleSubmit} className="card max-w-lg w-full space-y-4 shadow-lg border-mauve/30">
         <div className="text-center mb-2">
-          {info.logoUrl && <img src={info.logoUrl} className="w-16 h-16 mx-auto rounded-full object-cover mb-2" alt="" />}
+          {info.logoUrl && <img src={info.logoUrl} className="w-16 h-16 mx-auto rounded-full object-cover mb-2 border border-sky/30" alt="" />}
           <h1 className="font-display text-3xl text-turf">{info.tournamentName}</h1>
-          <p className="text-sm text-black/50">Team Owner Registration · {info.slotsLeft.teams} slots left</p>
+          <p className="text-sm text-mauve-dark">Team Owner Registration · {info.slotsLeft.teams} slots left</p>
         </div>
 
         <div>
@@ -91,9 +94,9 @@ export default function TeamRegister() {
           <input required className="input-field" value={form.teamName} onChange={e => update('teamName', e.target.value)} />
         </div>
 
-        <div className="flex items-center gap-2.5 bg-turf/5 p-3 rounded-lg">
-          <input type="checkbox" id="plays" className="w-4 h-4 rounded text-turf accent-turf" checked={form.ownerPlaysMatch} onChange={e => update('ownerPlaysMatch', e.target.checked)} />
-          <label htmlFor="plays" className="text-xs sm:text-sm font-medium cursor-pointer">I will also play as a player in matches</label>
+        <div className="flex items-center gap-2.5 bg-sky/10 p-3 rounded-xl border border-sky/20">
+          <input type="checkbox" id="plays" className="w-4 h-4 rounded text-mint accent-mint cursor-pointer" checked={form.ownerPlaysMatch} onChange={e => update('ownerPlaysMatch', e.target.checked)} />
+          <label htmlFor="plays" className="text-xs sm:text-sm font-medium text-turf cursor-pointer">I will also play as a player in matches</label>
         </div>
 
         <div>
@@ -105,14 +108,14 @@ export default function TeamRegister() {
         <ImageUpload label="Team Logo" onUploaded={(url) => update('teamLogoUrl', url)} />
 
         {info.teamRegistrationFee > 0 && (
-          <p className="text-sm text-turf font-semibold bg-gold/15 px-3 py-2 rounded-lg text-center">
+          <p className="text-sm text-mint-dark font-bold bg-mint/15 border border-mint/30 px-3 py-2 rounded-xl text-center">
             Registration Fee: Rs. {info.teamRegistrationFee}
           </p>
         )}
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3">
+        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25">
           {submitting ? 'Processing…' : info.teamRegistrationFee > 0 ? `Pay Rs. ${info.teamRegistrationFee} & Register` : 'Register Team'}
         </button>
       </form>
@@ -121,5 +124,5 @@ export default function TeamRegister() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-sky/15 via-ivory to-orchid/10">{children}</div>;
 }

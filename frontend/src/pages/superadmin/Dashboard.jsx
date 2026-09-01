@@ -132,11 +132,11 @@ export default function SuperAdminDashboard() {
   const dirtyPlanCount = plans.filter(isPlanDirty).length;
 
   return (
-    <div className="min-h-screen bg-ivory p-3.5 sm:p-6">
+    <div className="min-h-screen bg-ivory p-3.5 sm:p-6 text-turf">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-turf">Super Admin Panel</h1>
-          <p className="text-black/50 text-xs sm:text-sm">
+          <p className="text-mauve-dark text-xs sm:text-sm">
             Manage software pricing and organizer accounts.
           </p>
         </div>
@@ -147,14 +147,14 @@ export default function SuperAdminDashboard() {
 
       <StatusMessage type={status.type} message={status.message} />
 
-      <div className="card mb-6 mt-3">
+      <div className="card mb-6 mt-3 shadow-sm border-mauve/20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-1">
-          <h2 className="font-semibold text-sm sm:text-base">Software Pricing Plans</h2>
+          <h2 className="font-semibold text-sm sm:text-base text-turf">Software Pricing Plans</h2>
           {dirtyPlanCount > 0 && (
             <span className="badge-unsaved self-start sm:self-auto">● {dirtyPlanCount} unsaved</span>
           )}
         </div>
-        <p className="text-xs text-black/40 mb-3">
+        <p className="text-xs text-mauve-dark mb-3">
           Changes are not applied until you click Save on each plan.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
@@ -164,10 +164,10 @@ export default function SuperAdminDashboard() {
             return (
               <div
                 key={plan._id}
-                className={`border-2 rounded-xl p-3.5 sm:p-4 transition-colors ${dirty ? "border-gold bg-gold/5" : "border-black/10"}`}
+                className={`border-2 rounded-2xl p-3.5 sm:p-4 transition-all ${dirty ? "border-mint bg-mint/10 shadow-sm" : "border-mauve/25 hover:border-mint/50"}`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold text-sm">{plan.label}</p>
+                  <p className="font-bold text-sm text-turf">{plan.label}</p>
                   {dirty && <span className="badge-unsaved">● unsaved</span>}
                 </div>
                 <label className="label-text">Price (Rs.)</label>
@@ -191,7 +191,7 @@ export default function SuperAdminDashboard() {
                 <button
                   onClick={() => savePlan(plan)}
                   disabled={!dirty || savingPlanId === plan._id}
-                  className="btn-primary text-xs sm:text-sm w-full py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="btn-primary text-xs sm:text-sm w-full py-2 font-bold shadow-sm shadow-mint/20 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {savingPlanId === plan._id
                     ? "⏳ Saving…"
@@ -203,23 +203,23 @@ export default function SuperAdminDashboard() {
             );
           })}
           {plans.length === 0 && (
-            <p className="text-black/40 text-sm col-span-full">
+            <p className="text-mauve text-sm col-span-full">
               No pricing plans found.
             </p>
           )}
         </div>
       </div>
 
-      <div className="card overflow-x-auto scroll-touch">
-        <h2 className="font-semibold text-sm sm:text-base mb-1">Organizers</h2>
-        <p className="text-xs text-black/40 mb-3">
+      <div className="card overflow-x-auto scroll-touch shadow-sm border-mauve/20">
+        <h2 className="font-semibold text-sm sm:text-base mb-1 text-turf">Organizers</h2>
+        <p className="text-xs text-mauve-dark mb-3">
           An organizer must be suspended before they can be permanently deleted
           — this is a safety gate against accidentally wiping an active
           tournament's data.
         </p>
         <table className="w-full text-xs sm:text-sm min-w-[680px]">
           <thead>
-            <tr className="text-left text-black/50 border-b border-black/10">
+            <tr className="text-left text-mauve-dark border-b border-mauve/20">
               <th className="py-2.5 pr-3">Tournament</th>
               <th className="py-2.5 pr-3">Organizer</th>
               <th className="py-2.5 pr-3">Plan</th>
@@ -231,25 +231,25 @@ export default function SuperAdminDashboard() {
           <tbody>
             {organizers.map((o) => (
               <tr key={o._id} className="border-b border-black/5">
-                <td className="py-2 pr-3 font-medium">{o.tournamentName}</td>
-                <td className="py-2 pr-3">
+                <td className="py-2 pr-3 font-bold text-turf">{o.tournamentName}</td>
+                <td className="py-2 pr-3 text-mauve-dark">
                   {o.organizerName} ({o.email})
                 </td>
-                <td className="py-2 pr-3">{o.planType?.replace("_", " ")}</td>
+                <td className="py-2 pr-3 font-medium">{o.planType?.replace("_", " ")}</td>
                 <td className="py-2 pr-3">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                       o.status === "ACTIVE"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-mint/20 text-mint-dark border border-mint/40"
                         : o.status === "EXPIRED"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-black/10 text-black/50"
+                          ? "bg-rose/20 text-rose border border-rose/40"
+                          : "bg-black/10 text-mauve-dark"
                     }`}
                   >
                     {o.status}
                   </span>
                 </td>
-                <td className="py-2 pr-3">
+                <td className="py-2 pr-3 text-mauve-dark font-mono text-xs">
                   {o.passExpiryDate
                     ? new Date(o.passExpiryDate).toLocaleDateString("en-IN")
                     : "—"}
@@ -262,14 +262,14 @@ export default function SuperAdminDashboard() {
                     {o.status === "SUSPENDED" ? (
                       <button
                         onClick={() => reactivate(o._id)}
-                        className="text-green-700 text-xs font-semibold hover:underline px-1.5 py-1"
+                        className="text-mint-dark text-xs font-bold hover:underline px-1.5 py-1"
                       >
                         Reactivate
                       </button>
                     ) : (
                       <button
                         onClick={() => suspend(o._id)}
-                        className="text-clay text-xs font-semibold hover:underline px-1.5 py-1"
+                        className="text-rose text-xs font-semibold hover:underline px-1.5 py-1"
                       >
                         Suspend
                       </button>
@@ -277,7 +277,7 @@ export default function SuperAdminDashboard() {
                     {o.status === "SUSPENDED" && (
                       <button
                         onClick={() => deleteOrganizer(o)}
-                        className="text-red-700 text-xs font-semibold hover:underline px-1.5 py-1"
+                        className="text-rose text-xs font-bold hover:underline px-1.5 py-1"
                       >
                         🗑 Delete
                       </button>
@@ -289,7 +289,7 @@ export default function SuperAdminDashboard() {
           </tbody>
         </table>
         {organizers.length === 0 && (
-          <p className="text-black/40 text-sm py-6 text-center">
+          <p className="text-mauve text-sm py-6 text-center">
             No organizers yet.
           </p>
         )}

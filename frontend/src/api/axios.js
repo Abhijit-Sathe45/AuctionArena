@@ -6,7 +6,8 @@ import axios from 'axios';
 // so VITE_API_URL must be set to the backend's full URL for requests to reach it at all.
 const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : '/api';
 
-const api = axios.create({ baseURL: API_BASE, timeout: 20000 });
+// Generous 60s timeout to comfortably accommodate free-tier Render server cold starts (30-50s)
+const api = axios.create({ baseURL: API_BASE, timeout: 60000 });
 
 api.interceptors.request.use((config) => {
   const isSuperAdminRoute = config.url?.startsWith('/super-admin');

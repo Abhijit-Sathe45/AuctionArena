@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import api from "../../api/axios";
 import OrganizerLayout from "../../components/OrganizerLayout";
 import StatusMessage from "../../components/StatusMessage";
+import StreamOverlayModal from "../../components/StreamOverlayModal";
 import { useAuth } from "../../context/AuthContext";
 
 export default function Settings() {
@@ -10,6 +11,7 @@ export default function Settings() {
   const [original, setOriginal] = useState(null); // last-saved snapshot, to detect unsaved changes
   const [status, setStatus] = useState({ type: "", message: "" });
   const [saving, setSaving] = useState(false);
+  const [showOverlayModal, setShowOverlayModal] = useState(false);
 
   useEffect(() => {
     api.get("/organizer-admin/settings").then(({ data }) => {
@@ -48,7 +50,7 @@ export default function Settings() {
   if (!settings)
     return (
       <OrganizerLayout>
-        <p>Loading…</p>
+        <p className="text-turf/70 font-medium">Loading…</p>
       </OrganizerLayout>
     );
 
@@ -58,14 +60,14 @@ export default function Settings() {
         <h1 className="font-display text-2xl sm:text-3xl text-turf">Auction Settings</h1>
         {isDirty && <span className="badge-unsaved self-start sm:self-auto">● unsaved changes</span>}
       </div>
-      <p className="text-black/50 text-xs sm:text-sm mb-4 sm:mb-6">
+      <p className="text-mauve-dark text-xs sm:text-sm mb-4 sm:mb-6">
         Configure limits, fees and purse rules for your tournament. Nothing is
         saved until you click Save Settings.
       </p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-        <div className="card space-y-4">
-          <h2 className="font-semibold text-sm sm:text-base">Registration Limits</h2>
+        <div className="card space-y-4 shadow-sm border-mauve/20">
+          <h2 className="font-semibold text-sm sm:text-base text-turf">Registration Limits</h2>
           <Field
             label="Max Players Allowed"
             value={settings.maxPlayers}
@@ -88,8 +90,8 @@ export default function Settings() {
           />
         </div>
 
-        <div className="card space-y-4">
-          <h2 className="font-semibold text-sm sm:text-base">Registration Fees (Razorpay)</h2>
+        <div className="card space-y-4 shadow-sm border-mauve/20">
+          <h2 className="font-semibold text-sm sm:text-base text-turf">Registration Fees (Razorpay)</h2>
           <Field
             label="Player Registration Fee (Rs.)"
             value={settings.playerRegistrationFee}
@@ -102,8 +104,8 @@ export default function Settings() {
           />
         </div>
 
-        <div className="card space-y-4">
-          <h2 className="font-semibold text-sm sm:text-base">Purse & Squad Rules</h2>
+        <div className="card space-y-4 shadow-sm border-mauve/20">
+          <h2 className="font-semibold text-sm sm:text-base text-turf">Purse & Squad Rules</h2>
           <Field
             label="Max Purse per Team (Rs.)"
             value={settings.maxPursePerTeam}
@@ -121,14 +123,14 @@ export default function Settings() {
           />
         </div>
 
-        <div className="card space-y-4">
+        <div className="card space-y-4 shadow-sm border-mauve/20">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm sm:text-base">Auction Countdown Settings</h2>
+            <h2 className="font-semibold text-sm sm:text-base text-turf">Auction Countdown Settings</h2>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                 settings.countdownEnabled
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-black/10 text-black/60"
+                  ? "bg-mint/20 text-mint-dark border border-mint/40"
+                  : "bg-black/10 text-mauve-dark"
               }`}
             >
               {settings.countdownEnabled ? "ON" : "OFF"}
@@ -182,32 +184,32 @@ export default function Settings() {
                     value={settings.countdownDuration || 60}
                     onChange={(e) => update("countdownDuration", Math.max(5, Number(e.target.value)))}
                   />
-                  <p className="text-xs text-black/50 mt-1">Enter duration between 5 and 600 seconds.</p>
+                  <p className="text-xs text-mauve-dark mt-1">Enter duration between 5 and 600 seconds.</p>
                 </div>
               )}
 
-              <p className="text-xs text-turf-light/90 bg-turf/5 p-2.5 rounded-lg border border-turf/10">
+              <p className="text-xs text-turf bg-sky/15 p-2.5 rounded-xl border border-sky/30">
                 ⏱️ When bidding begins for a player, a{" "}
                 <strong>{settings.countdownDuration || 60}s</strong> countdown will run automatically on the Watch Live spectator screen.
               </p>
             </div>
           ) : (
             <div className="pt-2 border-t border-black/5">
-              <p className="text-xs text-black/50 italic bg-black/5 p-2.5 rounded-lg">
+              <p className="text-xs text-mauve-dark italic bg-black/5 p-2.5 rounded-xl">
                 Countdown is disabled. Bidding will proceed without a timer until the organizer manually selects Mark SOLD or Mark UNSOLD.
               </p>
             </div>
           )}
         </div>
 
-        <div className="card space-y-3">
-          <h2 className="font-semibold text-sm sm:text-base">Bid Increment Rules</h2>
-          <p className="text-xs text-black/50">
+        <div className="card space-y-3 shadow-sm border-mauve/20">
+          <h2 className="font-semibold text-sm sm:text-base text-turf">Bid Increment Rules</h2>
+          <p className="text-xs text-mauve-dark">
             Bids increase by this much depending on the current price range.
           </p>
           {settings.bidIncrementRules.map((r, i) => (
-            <div key={i} className="flex flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2 items-center text-xs sm:text-sm bg-turf/5 p-2 rounded-lg">
-              <span className="text-black/70">Up to Rs.</span>
+            <div key={i} className="flex flex-wrap sm:flex-nowrap gap-1.5 sm:gap-2 items-center text-xs sm:text-sm bg-sky/10 p-2.5 rounded-xl border border-sky/20">
+              <span className="text-turf font-medium">Up to Rs.</span>
               <input
                 type="number"
                 className="input-field w-24 sm:w-28 py-1 text-xs"
@@ -218,10 +220,10 @@ export default function Settings() {
                   update("bidIncrementRules", rules);
                 }}
               />
-              <span className="text-black/70">→ +Rs.</span>
+              <span className="text-turf font-medium">→ +Rs.</span>
               <input
                 type="number"
-                className="input-field w-20 sm:w-24 py-1 text-xs"
+                className="input-field w-20 sm:w-24 py-1 text-xs font-bold text-mint-dark"
                 value={r.increment}
                 onChange={(e) => {
                   const rules = [...settings.bidIncrementRules];
@@ -233,14 +235,14 @@ export default function Settings() {
           ))}
         </div>
 
-        <div className="card space-y-4">
+        <div className="card space-y-4 shadow-sm border-mauve/20">
           <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-sm sm:text-base">📱 Team Owner Mobile Bidding Remote</h2>
+            <h2 className="font-semibold text-sm sm:text-base text-turf">📱 Team Owner Mobile Bidding Remote</h2>
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
                 settings.teamOwnerBiddingEnabled
-                  ? "bg-emerald-100 text-emerald-800"
-                  : "bg-black/10 text-black/60"
+                  ? "bg-mint/20 text-mint-dark border border-mint/40"
+                  : "bg-black/10 text-mauve-dark"
               }`}
             >
               {settings.teamOwnerBiddingEnabled ? "ON" : "OFF"}
@@ -255,12 +257,12 @@ export default function Settings() {
 
           {settings.teamOwnerBiddingEnabled ? (
             <div className="space-y-3 pt-2 border-t border-black/5 animate-fade-in">
-              <p className="text-xs text-black/70 leading-relaxed">
+              <p className="text-xs text-mauve-dark leading-relaxed">
                 When enabled, team owners can open the mobile remote link on their phones, choose their team, enter their secret <strong>4-digit PIN</strong>, and place bids live during the auction with purse shield protection.
               </p>
 
               {organizer?.slug && (
-                <div className="bg-turf/5 border border-turf/15 rounded-xl p-3 space-y-2">
+                <div className="bg-sky/15 border border-sky/30 rounded-2xl p-3 space-y-2">
                   <span className="text-[11px] font-bold text-turf block">Team Owner Bidding Link:</span>
                   <div className="flex items-center gap-2">
                     <input
@@ -280,7 +282,7 @@ export default function Settings() {
                       Copy
                     </button>
                   </div>
-                  <p className="text-[10px] text-black/50">
+                  <p className="text-[10px] text-mauve-dark">
                     💡 View and edit individual team 4-digit PINs in the <strong>Teams</strong> tab.
                   </p>
                 </div>
@@ -288,17 +290,63 @@ export default function Settings() {
             </div>
           ) : (
             <div className="pt-2 border-t border-black/5">
-              <p className="text-xs text-black/50 italic bg-black/5 p-2.5 rounded-lg">
+              <p className="text-xs text-mauve-dark italic bg-black/5 p-2.5 rounded-xl">
                 Remote bidding is disabled. Only the organizer can place bids from the Live Auction screen.
               </p>
             </div>
           )}
         </div>
+
+        {/* OBS & Live Stream Broadcast Graphics Section */}
+        <div className="card space-y-4 border-2 border-mint/40 bg-gradient-to-br from-mint/10 via-white to-white shadow-md">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl text-turf flex items-center gap-2">
+              <span>🎥</span> OBS & Live Stream Overlay Studio
+            </h2>
+            <span className="text-[10px] font-black uppercase tracking-wider bg-mint text-turf-dark px-2.5 py-0.5 rounded-full shadow-sm">
+              YouTube & FB Live
+            </span>
+          </div>
+
+          <p className="text-xs text-mauve-dark leading-relaxed">
+            Generate transparent TV lower-thirds, side scorecards, and live countdown graphics directly inside <strong>OBS Studio</strong>, <strong>vMix</strong>, or <strong>Streamlabs</strong> for broadcast-quality auction live streams.
+          </p>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => setShowOverlayModal(true)}
+              className="btn-primary text-xs py-2 px-4 flex items-center gap-1.5 font-bold shadow-sm"
+            >
+              <span>⚙️</span> Open OBS Overlay Link Generator & Preview
+            </button>
+            {organizer?.slug && (
+              <a
+                href={`${window.location.origin}/overlay/${organizer.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-turf font-bold hover:underline underline-offset-2 flex items-center gap-1 hover:text-mint-dark"
+              >
+                👁️ Preview Overlay in New Tab ↗
+              </a>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 sticky bottom-3 sm:bottom-4 p-3 bg-ivory/95 backdrop-blur-md rounded-xl border border-black/10 shadow-lg z-20">
+      {/* OBS Stream Overlay Setup Modal */}
+      {organizer?.slug && (
+        <StreamOverlayModal
+          isOpen={showOverlayModal}
+          onClose={() => setShowOverlayModal(false)}
+          slug={organizer.slug}
+          tournamentName={organizer.tournamentName}
+        />
+      )}
+
+      <div className="mt-6 flex flex-wrap items-center gap-3 sticky bottom-3 sm:bottom-4 p-3 bg-ivory/95 backdrop-blur-md rounded-2xl border border-mauve/30 shadow-lg z-20">
         <button
-          className="btn-primary py-2.5 px-5 text-sm sm:text-base disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto"
+          className="btn-primary py-2.5 px-6 text-sm sm:text-base font-bold shadow-md shadow-mint/25 disabled:opacity-40 disabled:cursor-not-allowed w-full sm:w-auto"
           onClick={save}
           disabled={!isDirty || saving}
         >
@@ -325,9 +373,10 @@ function Field({ label, value, onChange }) {
 }
 function Toggle({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-2 text-sm">
+    <label className="flex items-center gap-2 text-sm text-turf font-medium cursor-pointer">
       <input
         type="checkbox"
+        className="rounded text-mint accent-mint cursor-pointer"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />

@@ -98,33 +98,35 @@ export default function TeamBidRemote() {
     };
   }, [session, remoteData?.organizerId, loadRemoteState]);
 
-  // 4. Live Countdown Timer Tick
+  // 4. Synchronized Countdown Timer calculation
   useEffect(() => {
-    if (!remoteData?.state?.countdownEnabled || !remoteData?.state?.biddingEndsAt) {
+    const endsAtStr = remoteData?.state?.biddingEndsAt;
+    const isCountdownEnabled = remoteData?.state?.countdownEnabled;
+    const hasPlayer = !!remoteData?.state?.currentPlayer;
+
+    if (!isCountdownEnabled || !endsAtStr || !hasPlayer) {
       setTimeLeft(null);
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
 
-    function updateTimer() {
-      const ends = new Date(remoteData.state.biddingEndsAt).getTime();
-      const now = Date.now();
-      const diff = Math.max(0, Math.ceil((ends - now) / 1000));
-      setTimeLeft(diff);
+    function calcTime() {
+      const diffMs = Math.max(0, new Date(endsAtStr).getTime() - Date.now());
+      const secs = Math.ceil(diffMs / 1000);
+      setTimeLeft(secs);
     }
 
-    updateTimer();
-    timerRef.current = setInterval(updateTimer, 500);
+    calcTime();
+    timerRef.current = setInterval(calcTime, 200);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [remoteData?.state?.countdownEnabled, remoteData?.state?.biddingEndsAt]);
+  }, [remoteData?.state?.biddingEndsAt, remoteData?.state?.countdownEnabled, remoteData?.state?.currentPlayer]);
 
-  // Team Login Handler
+  // Handle Team Login with PIN
   async function handleLogin(e) {
     e.preventDefault();
-    unlockAudio();
     setAuthError("");
     if (!selectedTeamId) {
       setAuthError("Please select your team");
@@ -143,9 +145,8 @@ export default function TeamBidRemote() {
       });
       localStorage.setItem(`team_remote_${slug}`, JSON.stringify(data));
       setSession(data);
-      playSoldSound();
     } catch (err) {
-      setAuthError(err.response?.data?.message || "Invalid Team PIN or remote bidding is disabled.");
+      setAuthError(err.response?.data?.message || "Invalid Team PIN");
     } finally {
       setLoggingIn(false);
     }
@@ -157,48 +158,39 @@ export default function TeamBidRemote() {
     setRemoteData(null);
   }
 
-  // Handle Fast Bidding
+  // Handle Live Bid Action from Mobile Pad
   async function handlePlaceBid() {
     unlockAudio();
-    if (!session?.token || bidding) return;
     setBidError("");
     setBidding(true);
-
     try {
-      const socket = socketRef.current;
-      if (socket && socket.connected) {
-        socket.emit("auction:team-bid", { token: session.token }, (res) => {
-          setBidding(false);
-          if (!res?.ok) {
-            setBidError(res?.message || "Bid could not be placed.");
-          } else {
-            playBidSound();
-            loadRemoteState();
-          }
-        });
-      } else {
-        setBidError("Connecting to live auction...");
-        setBidding(false);
-      }
+      const { data } = await api.post(
+        `/public/${slug}/team-bid`,
+        {},
+        { headers: { Authorization: `Bearer ${session.token}` } }
+      );
+      setRemoteData(data);
+      playBidSound();
     } catch (err) {
-      setBidError(err.message || "Failed to place bid");
+      const msg = err.response?.data?.message || "Bid rejected";
+      setBidError(msg);
+      // Auto-clear bid error after 3 seconds
+      setTimeout(() => setBidError(""), 3000);
+    } finally {
       setBidding(false);
     }
   }
 
-  // Handle Pass
+  // Handle Pass Player Action
   async function handlePass() {
-    unlockAudio();
-    if (!session?.token || passing) return;
     setPassing(true);
     try {
-      const socket = socketRef.current;
-      if (socket && socket.connected) {
-        socket.emit("auction:team-pass", { token: session.token }, () => {
-          setPassing(false);
-          loadRemoteState();
-        });
-      }
+      const { data } = await api.post(
+        `/public/${slug}/team-pass`,
+        {},
+        { headers: { Authorization: `Bearer ${session.token}` } }
+      );
+      setRemoteData(data);
     } catch {
       setPassing(false);
     }
@@ -207,15 +199,15 @@ export default function TeamBidRemote() {
   // If remote bidding is completely disabled by organizer
   if (tournament && !tournament.teamOwnerBiddingEnabled) {
     return (
-      <div className="min-h-screen bg-slate-950 text-ivory flex items-center justify-center p-4">
-        <div className="max-w-md w-full text-center space-y-4 p-6 bg-white/5 border border-white/10 rounded-2xl">
+      <div className="min-h-screen bg-ivory text-turf flex items-center justify-center p-4">
+        <div className="max-w-md w-full text-center space-y-4 p-6 bg-white border border-mauve/30 rounded-3xl shadow-xl">
           <span className="text-4xl block">🔒</span>
-          <h1 className="font-display text-2xl text-gold">Mobile Bidding Disabled</h1>
-          <p className="text-sm text-ivory/70 leading-relaxed">
+          <h1 className="font-display text-2xl text-turf font-bold">Mobile Bidding Disabled</h1>
+          <p className="text-sm text-mauve-dark leading-relaxed font-medium">
             Team Owner Remote Bidding is currently turned <strong>OFF</strong> by the tournament organizer. Bids are managed directly by the auctioneer.
           </p>
           <div className="pt-2">
-            <Link to={`/watch/${slug}`} className="btn-primary text-sm py-2 px-5 inline-block">
+            <Link to={`/watch/${slug}`} className="btn-primary text-sm py-2.5 px-6 inline-block font-bold">
               📺 Go to Watch Live Screen
             </Link>
           </div>
@@ -229,40 +221,40 @@ export default function TeamBidRemote() {
   // ----------------------------------------------------
   if (!session) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-950 via-turf-dark to-slate-950 text-ivory flex items-center justify-center p-4">
-        <div className="max-w-sm w-full bg-slate-900/90 backdrop-blur-md p-6 rounded-3xl border border-white/15 shadow-2xl space-y-5">
+      <div className="min-h-screen bg-gradient-to-b from-[#F0F5FF] via-[#FAF5FC] to-[#F2FCF8] text-turf flex items-center justify-center p-4">
+        <div className="max-w-sm w-full bg-white/95 backdrop-blur-md p-6 rounded-3xl border border-mauve/30 shadow-xl space-y-5">
           {/* Header */}
           <div className="text-center space-y-1.5">
             <span className="text-3xl block">📱</span>
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full bg-gold/20 text-gold border border-gold/30">
+            <span className="text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full bg-mint/20 text-mint-dark border border-mint/40">
               Team Remote Pad
             </span>
-            <h1 className="font-display text-2xl tracking-wide pt-1">
+            <h1 className="font-display text-2xl tracking-wide pt-1 text-turf font-bold">
               {tournament?.tournamentName || "Auction Arena"}
             </h1>
-            <p className="text-xs text-ivory/60">
+            <p className="text-xs text-mauve-dark font-medium">
               Select your team and enter your secret 4-digit PIN to bid live.
             </p>
           </div>
 
           {authError && (
-            <div className="p-3 bg-red-500/20 border border-red-500/40 rounded-xl text-xs text-red-300 animate-fade-in">
+            <div className="p-3 bg-rose/15 border border-rose/40 rounded-xl text-xs text-rose animate-fade-in font-bold">
               {authError}
             </div>
           )}
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="text-xs font-semibold text-ivory/80 block mb-1">
+              <label className="text-xs font-bold text-turf/85 block mb-1">
                 Select Your Team
               </label>
               <select
-                className="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-sm text-ivory focus:outline-none focus:border-gold"
+                className="w-full bg-white border border-mauve/35 rounded-xl p-3 text-sm text-turf focus:outline-none focus:border-mint font-semibold shadow-sm"
                 value={selectedTeamId}
                 onChange={(e) => setSelectedTeamId(e.target.value)}
               >
                 {tournament?.teams?.map((t) => (
-                  <option key={t._id} value={t._id} className="bg-slate-900 text-white">
+                  <option key={t._id} value={t._id} className="bg-white text-turf">
                     {t.teamName} ({t.ownerName})
                   </option>
                 ))}
@@ -270,7 +262,7 @@ export default function TeamBidRemote() {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-ivory/80 block mb-1">
+              <label className="text-xs font-bold text-turf/85 block mb-1">
                 4-Digit Secret PIN
               </label>
               <input
@@ -279,11 +271,11 @@ export default function TeamBidRemote() {
                 placeholder="••••"
                 pattern="[0-9]*"
                 inputMode="numeric"
-                className="w-full bg-black/50 border border-white/20 rounded-xl p-3 text-center text-2xl font-mono tracking-widest text-gold focus:outline-none focus:border-gold"
+                className="w-full bg-white border border-mauve/35 rounded-xl p-3 text-center text-2xl font-mono tracking-widest text-mint-dark focus:outline-none focus:border-mint shadow-sm font-bold"
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
               />
-              <p className="text-[10px] text-ivory/40 text-center mt-1">
+              <p className="text-[10px] text-mauve-dark text-center mt-1 font-medium">
                 Obtain your PIN from the tournament organizer.
               </p>
             </div>
@@ -291,14 +283,14 @@ export default function TeamBidRemote() {
             <button
               type="submit"
               disabled={loggingIn}
-              className="w-full py-3.5 rounded-xl bg-gold hover:bg-gold-dark text-slate-950 font-bold text-sm shadow-lg shadow-gold/20 active:scale-95 transition-transform disabled:opacity-50"
+              className="btn-primary w-full py-3.5 text-sm font-bold shadow-lg shadow-mint/25 active:scale-95 transition-transform disabled:opacity-50"
             >
               {loggingIn ? "Verifying PIN…" : "🔓 Enter Bidding Pad"}
             </button>
           </form>
 
           <div className="pt-2 text-center">
-            <Link to={`/watch/${slug}`} className="text-xs text-ivory/50 hover:text-ivory underline">
+            <Link to={`/watch/${slug}`} className="text-xs text-mauve-dark hover:text-turf underline font-medium">
               View Public Spectator Screen
             </Link>
           </div>
@@ -334,33 +326,33 @@ export default function TeamBidRemote() {
     (!state?.countdownEnabled || timeLeft === null || timeLeft > 0);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-ivory flex flex-col justify-between max-w-md mx-auto border-x border-white/10 shadow-2xl">
+    <div className="min-h-screen bg-[#F7FAFE] text-turf flex flex-col justify-between max-w-md mx-auto border-x border-mauve/25 shadow-xl">
       {/* Handheld Header Bar */}
-      <header className="p-3.5 bg-slate-900/95 backdrop-blur-md border-b border-white/10 flex items-center justify-between sticky top-0 z-30">
+      <header className="p-3.5 bg-white/95 backdrop-blur-md border-b border-mauve/20 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-2.5 min-w-0">
           {team.teamLogoUrl ? (
-            <img src={team.teamLogoUrl} className="w-9 h-9 rounded-full object-cover shrink-0 border border-gold/40" alt="" />
+            <img src={team.teamLogoUrl} className="w-9 h-9 rounded-full object-cover shrink-0 border border-mint/40 shadow-sm" alt="" />
           ) : (
-            <div className="w-9 h-9 rounded-full bg-turf text-gold flex items-center justify-center text-sm font-bold shrink-0">
+            <div className="w-9 h-9 rounded-full bg-mint/20 text-mint-dark flex items-center justify-center text-sm font-bold shrink-0 shadow-inner">
               🏏
             </div>
           )}
           <div className="min-w-0">
-            <h2 className="font-bold text-sm text-ivory truncate">{team.teamName}</h2>
-            <p className="text-[11px] text-ivory/60 truncate">Owner: {team.ownerName}</p>
+            <h2 className="font-bold text-sm text-turf truncate">{team.teamName}</h2>
+            <p className="text-[11px] text-mauve-dark truncate font-medium">Owner: {team.ownerName}</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="text-right">
-            <span className="text-[10px] text-ivory/50 block font-medium">Purse Left</span>
-            <span className="text-xs font-mono font-bold text-gold">
+            <span className="text-[10px] text-mauve-dark block font-bold">Purse Left</span>
+            <span className="text-xs font-mono font-black text-mint-dark">
               ₹{purseRemaining.toLocaleString("en-IN")}
             </span>
           </div>
           <button
             onClick={handleLogout}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-ivory/60 text-xs"
+            className="p-1.5 rounded-lg bg-sky/15 hover:bg-rose/15 text-rose text-xs"
             title="Sign Out"
           >
             🚪
@@ -369,18 +361,18 @@ export default function TeamBidRemote() {
       </header>
 
       {/* Main Bidding Arena */}
-      <main className="p-4 space-y-4 flex-1 overflow-y-auto">
+      <main className="p-4 space-y-4 flex-1 overflow-y-auto scroll-touch">
         {/* Squad Status Mini Meter */}
-        <div className="grid grid-cols-2 gap-2 text-xs bg-white/5 p-2.5 rounded-xl border border-white/10">
+        <div className="grid grid-cols-2 gap-2 text-xs bg-white p-3 rounded-2xl border border-mauve/20 shadow-sm">
           <div>
-            <span className="text-ivory/50 block text-[10px]">Squad Count</span>
-            <span className="font-bold text-ivory">
+            <span className="text-mauve-dark block text-[10px] font-semibold">Squad Count</span>
+            <span className="font-bold text-turf">
               {team?.squadCount || 0} / {team?.minSquad || 11} Min ({team?.maxSquad || 15} Max)
             </span>
           </div>
           <div className="text-right">
-            <span className="text-ivory/50 block text-[10px]">Purse Shield</span>
-            <span className="font-bold text-emerald-400">
+            <span className="text-mauve-dark block text-[10px] font-semibold">Purse Shield</span>
+            <span className="font-bold text-mint-dark">
               {minReserve > 0 ? `₹${minReserve.toLocaleString()} Protected` : "Full Free"}
             </span>
           </div>
@@ -388,10 +380,10 @@ export default function TeamBidRemote() {
 
         {/* Active Player Card */}
         {currentPlayer ? (
-          <div className="bg-gradient-to-b from-slate-900 to-black/60 p-4 rounded-2xl border border-white/15 space-y-3 relative overflow-hidden shadow-lg">
+          <div className="bg-white p-4 rounded-3xl border border-mauve/25 space-y-3 relative overflow-hidden shadow-md">
             {/* Category Pill & Timer */}
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-gold/20 text-gold border border-gold/30">
+              <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orchid/20 text-orchid-dark border border-orchid/30">
                 {state.currentCategory?.name || "Player in Auction"}
               </span>
 
@@ -399,10 +391,10 @@ export default function TeamBidRemote() {
                 <div
                   className={`flex items-center gap-1 font-mono text-sm font-bold px-2.5 py-0.5 rounded-full border ${
                     timeLeft <= 5
-                      ? "bg-red-500/20 text-red-400 border-red-500 animate-pulse"
+                      ? "bg-rose/15 text-rose border-rose animate-pulse"
                       : timeLeft <= 10
-                      ? "bg-amber-500/20 text-amber-400 border-amber-500"
-                      : "bg-white/10 text-ivory border-white/20"
+                      ? "bg-orchid/20 text-orchid-dark border-orchid"
+                      : "bg-mint/15 text-mint-dark border-mint/40"
                   }`}
                 >
                   <span>⏱️</span>
@@ -416,39 +408,39 @@ export default function TeamBidRemote() {
               {currentPlayer.photoUrl ? (
                 <img
                   src={currentPlayer.photoUrl}
-                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-white/20 shrink-0 shadow-md"
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-sky-dark/30 shrink-0 shadow-md"
                   alt=""
                 />
               ) : (
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-turf/30 text-gold flex items-center justify-center text-3xl shrink-0 border border-white/20">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-sky/20 text-mint-dark flex items-center justify-center text-3xl shrink-0 border border-sky/30 shadow-inner">
                   🏏
                 </div>
               )}
               <div className="min-w-0 flex-1">
-                <h3 className="font-display text-lg sm:text-xl text-ivory font-bold truncate">
+                <h3 className="font-display text-lg sm:text-xl text-turf font-bold truncate">
                   {currentPlayer.name}
                 </h3>
-                <p className="text-xs text-ivory/70">{currentPlayer.playerType} · Age {currentPlayer.age}</p>
-                <p className="text-[11px] text-ivory/50">
+                <p className="text-xs text-mauve-dark font-medium">{currentPlayer.playerType} · Age {currentPlayer.age}</p>
+                <p className="text-[11px] text-mauve-dark font-medium">
                   Bat: {currentPlayer.battingStyle} · Bowl: {currentPlayer.bowlingStyle}
                 </p>
-                <span className="text-[11px] text-gold font-semibold block mt-0.5">
+                <span className="text-[11px] text-mint-dark font-bold block mt-0.5">
                   Base Price: ₹{currentPlayer.basePrice?.toLocaleString("en-IN")}
                 </span>
               </div>
             </div>
 
             {/* Current Highest Bid Box */}
-            <div className="p-3 bg-black/60 rounded-xl border border-white/10 flex items-center justify-between">
+            <div className="p-3 bg-mint/15 rounded-2xl border border-mint/40 flex items-center justify-between shadow-inner">
               <div>
-                <span className="text-[10px] text-ivory/50 uppercase font-bold block">Current Highest Bid</span>
-                <span className="text-2xl sm:text-3xl font-mono font-black text-gold">
+                <span className="text-[10px] text-mauve-dark uppercase font-bold block">Current Highest Bid</span>
+                <span className="text-2xl sm:text-3xl font-mono font-black text-mint-dark">
                   ₹{currentBidAmount?.toLocaleString("en-IN")}
                 </span>
               </div>
               <div className="text-right">
-                <span className="text-[10px] text-ivory/50 uppercase font-bold block">Winning Team</span>
-                <span className="text-xs sm:text-sm font-bold text-ivory truncate max-w-[140px] block">
+                <span className="text-[10px] text-mauve-dark uppercase font-bold block">Winning Team</span>
+                <span className="text-xs sm:text-sm font-bold text-turf truncate max-w-[140px] block">
                   {state.currentBidTeam ? state.currentBidTeam.teamName : "No Bids Yet"}
                 </span>
               </div>
@@ -456,29 +448,29 @@ export default function TeamBidRemote() {
 
             {/* Live Status Banners */}
             {isHighestBidder && (
-              <div className="p-2.5 bg-gold/20 border border-gold/40 rounded-xl text-center text-xs font-bold text-gold flex items-center justify-center gap-1.5 animate-pulse">
+              <div className="p-2.5 bg-mint/20 border border-mint/40 rounded-2xl text-center text-xs font-bold text-mint-dark flex items-center justify-center gap-1.5 animate-pulse shadow-sm">
                 <span>👑</span>
                 <span>YOU ARE THE HIGHEST BIDDER!</span>
               </div>
             )}
 
             {hasPassed && (
-              <div className="p-2.5 bg-slate-800 border border-slate-700 rounded-xl text-center text-xs font-semibold text-slate-400">
+              <div className="p-2.5 bg-sky/10 border border-sky/25 rounded-2xl text-center text-xs font-semibold text-mauve-dark">
                 You have passed on this player.
               </div>
             )}
 
             {bidError && (
-              <div className="p-2 bg-red-500/20 border border-red-500/40 rounded-xl text-center text-xs text-red-300">
+              <div className="p-2 bg-rose/15 border border-rose/40 rounded-2xl text-center text-xs text-rose font-bold">
                 {bidError}
               </div>
             )}
           </div>
         ) : (
-          <div className="p-8 text-center bg-white/5 rounded-2xl border border-white/10 space-y-3 my-8">
+          <div className="p-8 text-center bg-white rounded-3xl border border-mauve/25 space-y-3 my-8 shadow-sm">
             <span className="text-4xl block animate-bounce">⏳</span>
-            <h3 className="font-display text-xl text-gold">Waiting for Next Player</h3>
-            <p className="text-xs text-ivory/60 leading-relaxed">
+            <h3 className="font-display text-xl text-turf font-bold">Waiting for Next Player</h3>
+            <p className="text-xs text-mauve-dark leading-relaxed font-medium">
               The auctioneer will bring the next player to the bidding arena shortly.
             </p>
           </div>
@@ -486,17 +478,17 @@ export default function TeamBidRemote() {
       </main>
 
       {/* Giant Mobile Bidding Action Footer */}
-      <footer className="p-4 bg-slate-900 border-t border-white/15 space-y-2.5 sticky bottom-0 z-30">
+      <footer className="p-4 bg-white border-t border-mauve/20 space-y-2.5 sticky bottom-0 z-30 shadow-lg">
         {/* Giant BID Button */}
         <button
           onClick={handlePlaceBid}
           disabled={!canBid || bidding}
-          className={`w-full py-4 rounded-2xl font-black text-lg sm:text-xl uppercase tracking-wide shadow-2xl transition-all duration-150 active:scale-95 flex items-center justify-center gap-2 ${
+          className={`w-full py-4 rounded-2xl font-black text-lg sm:text-xl uppercase tracking-wide shadow-xl transition-all duration-150 active:scale-95 flex items-center justify-center gap-2 ${
             isHighestBidder
-              ? "bg-gold/30 text-gold border-2 border-gold/40 cursor-not-allowed"
+              ? "bg-mint/20 text-mint-dark border-2 border-mint/40 cursor-not-allowed"
               : canBid
-              ? "bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white shadow-emerald-500/25 ring-2 ring-emerald-400/50"
-              : "bg-white/10 text-ivory/40 cursor-not-allowed"
+              ? "bg-gradient-to-r from-mint to-mint-dark hover:from-mint-light hover:to-mint text-turf-dark shadow-mint/30 ring-2 ring-mint/50"
+              : "bg-sky/15 text-mauve-dark cursor-not-allowed"
           }`}
         >
           <span>🔨</span>
@@ -520,7 +512,7 @@ export default function TeamBidRemote() {
           <button
             onClick={handlePass}
             disabled={passing}
-            className="w-full py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-ivory/60 active:scale-95 transition-transform"
+            className="w-full py-2.5 rounded-xl bg-white hover:bg-rose/15 text-xs font-bold text-rose active:scale-95 transition-all border border-rose/30 shadow-sm"
           >
             {passing ? "Passing…" : "✋ Pass on this Player"}
           </button>

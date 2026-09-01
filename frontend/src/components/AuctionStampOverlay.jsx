@@ -34,7 +34,7 @@ export default function AuctionStampOverlay({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ${
+      className={`fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md transition-opacity duration-300 ${
         shaking ? "animate-stamp-shake" : ""
       }`}
       onClick={(e) => {
@@ -43,13 +43,13 @@ export default function AuctionStampOverlay({
         }
       }}
     >
-      <div className="relative max-w-lg w-full bg-turf-dark/95 border border-white/20 rounded-3xl p-6 sm:p-8 text-center shadow-2xl overflow-hidden">
+      <div className="relative max-w-lg w-full bg-turf-dark/95 border border-white/15 rounded-3xl p-6 sm:p-8 text-center shadow-2xl overflow-hidden">
         {/* Subtle radial background glow */}
         <div
-          className={`absolute inset-0 pointer-events-none opacity-20 ${
+          className={`absolute inset-0 pointer-events-none opacity-25 ${
             isSold
-              ? "bg-[radial-gradient(circle_at_center,_#10b981_0%,_transparent_70%)]"
-              : "bg-[radial-gradient(circle_at_center,_#ef4444_0%,_transparent_70%)]"
+              ? "bg-[radial-gradient(circle_at_center,_#2CF6B3_0%,_transparent_70%)]"
+              : "bg-[radial-gradient(circle_at_center,_#DE6C83_0%,_transparent_70%)]"
           }`}
         />
 
@@ -57,7 +57,7 @@ export default function AuctionStampOverlay({
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 text-white/50 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-sm transition-colors z-20"
+            className="absolute top-3 right-3 text-sky/60 hover:text-white bg-white/10 hover:bg-white/20 rounded-full w-8 h-8 flex items-center justify-center text-sm transition-colors z-20"
             title="Close"
           >
             ✕
@@ -71,7 +71,7 @@ export default function AuctionStampOverlay({
               <img
                 src={player.photoUrl}
                 alt=""
-                className="w-12 h-12 rounded-full object-cover border-2 border-white/30"
+                className="w-12 h-12 rounded-full object-cover border-2 border-sky/40"
               />
             ) : (
               <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-xl">
@@ -79,10 +79,10 @@ export default function AuctionStampOverlay({
               </div>
             )}
             <div className="text-left">
-              <p className="font-display text-xl text-ivory tracking-wide leading-tight">
+              <p className="font-display text-xl text-sky tracking-wide leading-tight">
                 {player.name}
               </p>
-              <p className="text-xs text-ivory/60">
+              <p className="text-xs text-mauve">
                 {player.playerType} {player.age ? `· Age ${player.age}` : ""}
               </p>
             </div>
@@ -113,7 +113,7 @@ export default function AuctionStampOverlay({
         {/* Winning Details (SOLD) or Pass Notice (UNSOLD) */}
         {isSold && team && (
           <div className="mt-4 pt-4 border-t border-white/15 animate-fade-in space-y-2">
-            <p className="text-xs text-ivory/60 uppercase tracking-wider font-medium">
+            <p className="text-xs text-sky/70 uppercase tracking-wider font-medium">
               Acquired By
             </p>
             <div className="flex items-center justify-center gap-2.5">
@@ -121,22 +121,22 @@ export default function AuctionStampOverlay({
                 <img
                   src={team.teamLogoUrl}
                   alt=""
-                  className="w-8 h-8 rounded-full object-cover border border-gold/40"
+                  className="w-8 h-8 rounded-full object-cover border border-mint/40"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gold/20 text-gold flex items-center justify-center text-xs">
+                <div className="w-8 h-8 rounded-full bg-mint/20 text-mint flex items-center justify-center text-xs">
                   🏆
                 </div>
               )}
-              <span className="font-display text-2xl text-gold font-semibold tracking-wide">
+              <span className="font-display text-2xl text-mint font-semibold tracking-wide">
                 {team.teamName}
               </span>
             </div>
 
             {finalPrice !== undefined && (
               <div className="inline-block bg-white/10 px-4 py-1.5 rounded-full border border-white/10 mt-1">
-                <span className="text-xs text-ivory/80">Winning Bid: </span>
-                <span className="text-sm font-bold text-emerald-400 font-display tracking-wide">
+                <span className="text-xs text-sky/80">Winning Bid: </span>
+                <span className="text-sm font-bold text-mint font-display tracking-wide">
                   Rs. {Number(finalPrice).toLocaleString("en-IN")}
                 </span>
               </div>
@@ -146,10 +146,10 @@ export default function AuctionStampOverlay({
 
         {!isSold && (
           <div className="mt-4 pt-4 border-t border-white/15 animate-fade-in space-y-1">
-            <p className="text-sm text-red-400 font-semibold">
+            <p className="text-sm text-rose font-semibold">
               No bids received
             </p>
-            <p className="text-xs text-ivory/50">
+            <p className="text-xs text-mauve">
               Player returned to pool for future rounds.
             </p>
           </div>

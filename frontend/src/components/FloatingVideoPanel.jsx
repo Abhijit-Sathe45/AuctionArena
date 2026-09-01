@@ -87,18 +87,21 @@ export default function FloatingVideoPanel({ title, src, onClose }) {
 
   return (
     <div
-      className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50 bg-black rounded-xl shadow-2xl border border-white/20 flex flex-col overflow-hidden max-w-[calc(100vw-1rem)]"
+      className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50 bg-white rounded-2xl shadow-2xl border border-mauve/30 flex flex-col overflow-hidden max-w-[calc(100vw-1rem)]"
       style={{
         width: size.width,
         height: minimized ? "auto" : size.height,
       }}
     >
-      <div className="flex items-center justify-between px-3 py-2 bg-turf text-ivory text-xs shrink-0 select-none">
-        <span className="truncate font-medium pr-2">{title}</span>
+      <div className="flex items-center justify-between px-3.5 py-2.5 bg-white text-turf text-xs shrink-0 select-none border-b border-mauve/20">
+        <span className="truncate font-bold pr-2 flex items-center gap-1.5 text-turf">
+          <span className="w-2 h-2 rounded-full bg-rose animate-pulse" />
+          {title}
+        </span>
         <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => setMinimized((m) => !m)}
-            className="p-1 rounded hover:bg-white/20 active:bg-white/30 leading-none text-xs"
+            className="p-1 rounded-lg hover:bg-sky/20 active:bg-sky/30 leading-none text-xs text-turf font-bold"
             title={minimized ? "Expand" : "Minimize"}
             aria-label={minimized ? "Expand video" : "Minimize video"}
           >
@@ -106,7 +109,7 @@ export default function FloatingVideoPanel({ title, src, onClose }) {
           </button>
           <button
             onClick={onClose}
-            className="p-1 rounded hover:bg-white/20 active:bg-white/30 leading-none text-base font-bold"
+            className="p-1 rounded-lg hover:bg-rose/20 active:bg-rose/30 leading-none text-base font-black text-rose"
             title="Close"
             aria-label="Close video"
           >
@@ -133,7 +136,7 @@ export default function FloatingVideoPanel({ title, src, onClose }) {
             <svg viewBox="0 0 10 10" className="w-4 h-4 opacity-70">
               <path
                 d="M9 1L1 9M9 5L5 9M9 9L9 9"
-                stroke="white"
+                stroke="#C9DDFF"
                 strokeWidth="1.5"
               />
             </svg>

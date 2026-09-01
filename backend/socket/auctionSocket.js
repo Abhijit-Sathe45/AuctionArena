@@ -118,6 +118,26 @@ function registerAuctionSocketHandlers(io, socket) {
       if (typeof ack === 'function') ack({ ok: false, message: err.message });
     }
   });
+
+  // Organizer live announcement / custom commentary broadcast
+  socket.on('auction:post-announcement', async ({ token, message, author = 'Auctioneer' } = {}, ack) => {
+    try {
+      const organizerId = await authenticateOrganizerSocket(token);
+      if (!message || !message.trim()) throw new Error('Announcement message cannot be empty');
+
+      const payload = {
+        event: 'ANNOUNCEMENT',
+        message: message.trim(),
+        author: author.trim() || 'Auctioneer',
+        timestamp: new Date(),
+      };
+
+      io.to(`auction-${organizerId}`).emit('auction-update', payload);
+      if (typeof ack === 'function') ack({ ok: true, payload });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ ok: false, message: err.message });
+    }
+  });
 }
 
-module.exports = registerAuctionSocketHandlers;
+module.exports = registerAuctionSocketHandlers;

@@ -72,29 +72,29 @@ export default function BuySoftware() {
   if (credentials) {
     return (
       <Center>
-        <div className="card max-w-md w-full text-center space-y-4 shadow-md">
-          <div className="w-14 h-14 bg-turf/10 text-turf rounded-full flex items-center justify-center mx-auto text-3xl">
+        <div className="card max-w-md w-full text-center space-y-4 shadow-lg border-sky/30">
+          <div className="w-16 h-16 bg-mint/20 text-mint rounded-2xl flex items-center justify-center mx-auto text-3xl shadow-inner">
             🎉
           </div>
           <h2 className="font-display text-3xl text-turf">
             Welcome Aboard!
           </h2>
-          <p className="text-black/70 text-sm">
+          <p className="text-mauve-dark text-sm">
             Your auction software account is ready.<br/>
             You can now log in using your registered credentials.
           </p>
-          <div className="bg-turf/5 rounded-xl p-4 text-left space-y-2.5 border border-turf/15">
+          <div className="bg-sky/10 rounded-2xl p-4 text-left space-y-2.5 border border-sky/30">
             <div>
-              <span className="text-xs text-black/50 block font-medium">Login ID</span>
-              <span className="font-semibold text-turf-dark text-sm sm:text-base">{credentials.loginId}</span>
+              <span className="text-xs text-mauve-dark block font-medium">Login ID</span>
+              <span className="font-bold text-turf text-sm sm:text-base">{credentials.loginId}</span>
             </div>
             <div>
-              <span className="text-xs text-black/50 block font-medium">Password</span>
-              <span className="font-medium text-black/70 text-sm">•••••••• <span className="text-xs text-black/50">(Password created by you)</span></span>
+              <span className="text-xs text-mauve-dark block font-medium">Password</span>
+              <span className="font-medium text-turf/80 text-sm">•••••••• <span className="text-xs text-mauve">(Password created by you)</span></span>
             </div>
           </div>
           <button
-            className="btn-primary w-full py-3 text-base shadow-sm"
+            className="btn-primary w-full py-3 text-base font-bold shadow-md shadow-mint/20"
             onClick={() => navigate("/organizer/login")}
           >
             Go to Organizer Login
@@ -106,10 +106,10 @@ export default function BuySoftware() {
 
   return (
     <Center>
-      <form onSubmit={handleSubmit} className="card max-w-lg w-full space-y-4">
+      <form onSubmit={handleSubmit} className="card max-w-lg w-full space-y-4 shadow-lg border-mauve/30">
         <div className="text-center mb-2">
           <h1 className="font-display text-3xl text-turf">Get Your Auction Software</h1>
-          <p className="text-sm text-black/50">Set up your tournament and start collecting registrations in minutes.</p>
+          <p className="text-sm text-mauve-dark">Set up your tournament and start collecting registrations in minutes.</p>
         </div>
 
         <div>
@@ -150,7 +150,7 @@ export default function BuySoftware() {
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-black/40 hover:text-black/70 focus:outline-none"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-mauve hover:text-turf focus:outline-none"
                 onClick={() => setShowPassword(v => !v)}
                 tabIndex={-1}
                 aria-label={showPassword ? "Hide password" : "Show password"}
@@ -168,7 +168,7 @@ export default function BuySoftware() {
               </button>
             </div>
             {form.password && form.password.length < 6 && (
-              <p className="text-[11px] text-amber-600 mt-1">Must be at least 6 characters</p>
+              <p className="text-[11px] text-rose mt-1">Must be at least 6 characters</p>
             )}
           </div>
           <div>
@@ -180,14 +180,14 @@ export default function BuySoftware() {
                 minLength={6}
                 placeholder="Re-enter password"
                 className={`input-field pr-10 ${
-                  form.confirmPassword && form.password !== form.confirmPassword ? 'border-red-400 focus:ring-red-400' : ''
+                  form.confirmPassword && form.password !== form.confirmPassword ? 'border-rose focus:ring-rose' : ''
                 }`}
                 value={form.confirmPassword}
                 onChange={e => update('confirmPassword', e.target.value)}
               />
               <button
                 type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-black/40 hover:text-black/70 focus:outline-none"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-mauve hover:text-turf focus:outline-none"
                 onClick={() => setShowConfirmPassword(v => !v)}
                 tabIndex={-1}
                 aria-label={showConfirmPassword ? "Hide password" : "Show password"}
@@ -205,7 +205,7 @@ export default function BuySoftware() {
               </button>
             </div>
             {form.confirmPassword && (
-              <p className={`text-[11px] mt-1 ${form.password === form.confirmPassword ? 'text-emerald-600 font-medium' : 'text-red-500'}`}>
+              <p className={`text-[11px] mt-1 ${form.password === form.confirmPassword ? 'text-mint font-medium' : 'text-rose'}`}>
                 {form.password === form.confirmPassword ? '✓ Passwords match' : '✕ Passwords do not match'}
               </p>
             )}
@@ -219,9 +219,9 @@ export default function BuySoftware() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
             {PLANS.map(p => (
               <button type="button" key={p.planType} onClick={() => setSelectedPlan(p.planType)}
-                className={`text-left border-2 rounded-xl p-3 transition-colors active:scale-[0.98] ${selectedPlan === p.planType ? 'border-gold bg-gold/10' : 'border-black/10 hover:border-black/25'}`}>
-                <p className="font-semibold text-sm text-turf">{p.label}</p>
-                <p className="text-xs text-black/60 mt-1">{p.blurb}</p>
+                className={`text-left border-2 rounded-2xl p-3.5 transition-all active:scale-[0.98] ${selectedPlan === p.planType ? 'border-mint bg-mint/10 shadow-sm' : 'border-mauve/20 hover:border-sky'}`}>
+                <p className="font-bold text-sm text-turf">{p.label}</p>
+                <p className="text-xs text-mauve-dark mt-1">{p.blurb}</p>
               </button>
             ))}
           </div>
@@ -229,7 +229,7 @@ export default function BuySoftware() {
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3">
+        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25">
           {submitting ? 'Processing…' : 'Proceed to Payment'}
         </button>
       </form>
@@ -238,5 +238,5 @@ export default function BuySoftware() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-sky/15 via-ivory to-orchid/10">{children}</div>;
 }

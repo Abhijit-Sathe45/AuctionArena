@@ -38,20 +38,23 @@ export default function RenewPass() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-clay/5 to-ivory p-3.5 sm:p-6 py-8 sm:py-12">
-      <div className="card max-w-md w-full space-y-4 text-center">
-        <h1 className="font-display text-2xl sm:text-3xl text-clay">Your Pass Has Expired</h1>
-        <p className="text-black/60 text-xs sm:text-sm">Renew now to regain full access to your auction dashboard, live auction tools, and registration links.</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-rose/10 via-ivory to-orchid/10 p-3.5 sm:p-6 py-8 sm:py-12">
+      <div className="card max-w-md w-full space-y-4 text-center shadow-xl border-mauve/30">
+        <div className="w-14 h-14 bg-rose/15 text-rose rounded-2xl flex items-center justify-center mx-auto text-2xl mb-1">
+          ⏳
+        </div>
+        <h1 className="font-display text-2xl sm:text-3xl text-rose">Your Pass Has Expired</h1>
+        <p className="text-mauve-dark text-xs sm:text-sm">Renew now to regain full access to your auction dashboard, live auction tools, and registration links.</p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
           {PLANS.map(p => (
             <button key={p.planType} onClick={() => setSelectedPlan(p.planType)}
-              className={`border-2 rounded-xl p-3 text-sm font-medium transition-colors active:scale-[0.98] ${selectedPlan === p.planType ? 'border-gold bg-gold/10 font-semibold' : 'border-black/10 hover:border-black/25'}`}>
+              className={`border-2 rounded-2xl p-3 text-sm transition-all active:scale-[0.98] ${selectedPlan === p.planType ? 'border-mint bg-mint/15 font-bold text-turf shadow-sm' : 'border-mauve/30 hover:border-mint/50 text-mauve-dark'}`}>
               {p.label}
             </button>
           ))}
         </div>
         <StatusMessage type={status.type} message={status.message} />
-        <button onClick={handleRenew} disabled={submitting} className="btn-primary w-full py-3 text-base">
+        <button onClick={handleRenew} disabled={submitting} className="btn-primary w-full py-3 text-base font-bold shadow-lg shadow-mint/25">
           {submitting ? 'Processing…' : 'Renew Pass'}
         </button>
       </div>

@@ -32,11 +32,15 @@ export default function OrganizerLogin() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-turf/5 to-ivory p-3.5 sm:p-6 py-8 sm:py-12">
-      <form onSubmit={handleSubmit} className="card max-w-sm w-full space-y-4">
-        <h1 className="font-display text-2xl sm:text-3xl text-turf text-center">Organizer Login</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-sky/15 via-ivory to-orchid/10 p-3.5 sm:p-6 py-8 sm:py-12">
+      <form onSubmit={handleSubmit} className="card max-w-sm w-full space-y-4 shadow-xl border-mauve/30">
+        <div className="text-center mb-1">
+          <span className="text-3xl block mb-1">🏏</span>
+          <h1 className="font-display text-2xl sm:text-3xl text-turf">Organizer Login</h1>
+          <p className="text-xs text-mauve-dark mt-1">Manage your teams, players, and live auction</p>
+        </div>
         <div>
-          <label className="label-text">Login ID</label>
+          <label className="label-text">Login ID (Email)</label>
           <input required className="input-field" value={loginId} onChange={e => setLoginId(e.target.value)} />
         </div>
         <div>
@@ -44,12 +48,12 @@ export default function OrganizerLogin() {
           <input required type="password" className="input-field" value={password} onChange={e => setPassword(e.target.value)} />
         </div>
         <StatusMessage type={status.type} message={status.message} />
-        <button type="submit" disabled={submitting} className="btn-primary w-full py-3 text-base">
+        <button type="submit" disabled={submitting} className="btn-primary w-full py-3 text-base font-bold shadow-md shadow-mint/25">
           {submitting ? 'Logging in…' : 'Log In'}
         </button>
-        <p className="text-center text-xs sm:text-sm text-black/60 pt-1">
+        <p className="text-center text-xs sm:text-sm text-mauve-dark pt-1">
           No account yet?{' '}
-          <Link to="/get-started" className="text-turf font-semibold underline underline-offset-2">
+          <Link to="/get-started" className="text-turf font-bold underline underline-offset-2 hover:text-mint-dark">
             Buy the software
           </Link>
         </p>

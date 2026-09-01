@@ -5,8 +5,10 @@ const {
   getTournamentInfo, registerPlayer, verifyPlayerPayment, registerTeam, verifyTeamPayment,
   getLiveAuctionSpectatorView, getTeamsListForRemote, teamLogin, getTeamRemoteState,
 } = require('../controllers/publicController');
+const analyticsCtrl = require('../controllers/analyticsController');
 
 router.get('/:slug/info', asyncHandler(getTournamentInfo));
+router.get('/:slug/analytics', asyncHandler(analyticsCtrl.getPublicAnalytics));
 router.post('/:slug/player/register', asyncHandler(registerPlayer));
 router.post('/:slug/player/verify-payment', asyncHandler(verifyPlayerPayment));
 router.post('/:slug/team/register', asyncHandler(registerTeam));

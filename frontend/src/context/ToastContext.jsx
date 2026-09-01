@@ -47,9 +47,9 @@ export function useToast() {
 }
 
 const STYLES = {
-  success: "bg-turf text-ivory border-turf-light",
-  error: "bg-clay text-ivory border-clay",
-  info: "bg-white text-turf-dark border-black/10",
+  success: "bg-turf-dark text-white border-l-4 border-l-mint border-y border-r border-white/10 shadow-mint/15 shadow-xl",
+  error: "bg-turf-dark text-white border-l-4 border-l-rose border-y border-r border-white/10 shadow-rose/15 shadow-xl",
+  info: "bg-turf-dark text-white border-l-4 border-l-sky border-y border-r border-white/10 shadow-sky/15 shadow-xl",
 };
 
 function ToastViewport({ toasts, onDismiss }) {
@@ -60,9 +60,9 @@ function ToastViewport({ toasts, onDismiss }) {
         <div
           key={t.id}
           role="status"
-          className={`pointer-events-auto flex items-start justify-between gap-3 border rounded-xl shadow-xl px-4 py-3 text-sm animate-[fadeIn_0.15s_ease-out] ${STYLES[t.type] || STYLES.info}`}
+          className={`pointer-events-auto flex items-start justify-between gap-3 rounded-2xl shadow-xl px-4 py-3 text-sm animate-[fadeIn_0.15s_ease-out] backdrop-blur-md ${STYLES[t.type] || STYLES.info}`}
         >
-          <span className="flex-1">{t.message}</span>
+          <span className="flex-1 font-medium">{t.message}</span>
           <button
             onClick={() => onDismiss(t.id)}
             className="opacity-70 hover:opacity-100 leading-none text-lg p-1 -mr-1"

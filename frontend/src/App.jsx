@@ -11,11 +11,13 @@ import SplashScreen from "./components/SplashScreen";
 // when that route is actually visited, so a player registering doesn't have to
 // download the organizer admin panel, live auction, or super admin code.
 import Home from "./pages/public/Home";
+import AIAssistantWidget from "./components/AIAssistantWidget";
 
 const PlayerRegister = lazy(() => import("./pages/public/PlayerRegister"));
 const TeamRegister = lazy(() => import("./pages/public/TeamRegister"));
 const BuySoftware = lazy(() => import("./pages/public/BuySoftware"));
 const WatchLive = lazy(() => import("./pages/public/WatchLive"));
+const StreamOverlay = lazy(() => import("./pages/public/StreamOverlay"));
 const HowToUse = lazy(() => import("./pages/public/HowToUse"));
 const TeamBidRemote = lazy(() => import("./pages/public/TeamBidRemote"));
 
@@ -45,6 +47,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <AIAssistantWidget />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Public */}
@@ -54,6 +57,8 @@ export default function App() {
             <Route path="/register/player/:slug" element={<PlayerRegister />} />
             <Route path="/register/team/:slug" element={<TeamRegister />} />
             <Route path="/watch/:slug" element={<WatchLive />} />
+            <Route path="/overlay/:slug" element={<StreamOverlay />} />
+            <Route path="/stream-overlay/:slug" element={<StreamOverlay />} />
             <Route path="/bid/:slug" element={<TeamBidRemote />} />
 
             {/* Organizer */}
@@ -103,6 +108,14 @@ export default function App() {
               element={
                 <ProtectedRoute tokenKey="organizerToken">
                   <Categories />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/live"
+              element={
+                <ProtectedRoute tokenKey="organizerToken">
+                  <LiveAuction />
                 </ProtectedRoute>
               }
             />

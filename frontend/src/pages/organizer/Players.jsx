@@ -12,6 +12,7 @@ export default function Players() {
   const [players, setPlayers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [filter, setFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
   const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(true);
   const [edits, setEdits] = useState({});
@@ -152,9 +153,17 @@ export default function Players() {
     load();
   }
 
-  const visible = players.filter(
-    (p) => filter === "ALL" || p.auctionStatus === filter,
-  );
+  const visible = players.filter((p) => {
+    if (filter !== "ALL" && p.auctionStatus !== filter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const nameMatch = (p.name || "").toLowerCase().includes(q);
+      const phoneMatch = (p.phone || "").toLowerCase().includes(q);
+      const typeMatch = (p.playerType || "").toLowerCase().includes(q);
+      return nameMatch || phoneMatch || typeMatch;
+    }
+    return true;
+  });
   const dirtyCount = visible.filter(isDirty).length;
 
   async function saveAll() {
@@ -175,31 +184,38 @@ export default function Players() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-turf">Players</h1>
-          <p className="text-black/50 text-xs sm:text-sm mt-0.5">
-            Approve registrations, assign categories & base prices before
-            auction. If a player's photo shows the fallback icon, click "Change"
-            to upload a replacement. Nothing is saved until you click Save.
+          <p className="text-mauve-dark text-xs sm:text-sm mt-0.5">
+            Approve registrations, assign categories & base prices before auction.
           </p>
         </div>
-        <select
-          className="input-field w-full sm:w-44 shrink-0"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="ALL">All statuses</option>
-          <option value="PENDING">Pending</option>
-          <option value="SOLD">Sold</option>
-          <option value="UNSOLD">Unsold</option>
-        </select>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="🔍 Search name, phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-field w-full sm:w-48 text-xs py-2"
+          />
+          <select
+            className="input-field w-full sm:w-40 shrink-0 text-xs py-2"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            <option value="ALL">All ({players.length})</option>
+            <option value="PENDING">Pending</option>
+            <option value="SOLD">Sold</option>
+            <option value="UNSOLD">Unsold</option>
+          </select>
+        </div>
       </div>
 
       {dirtyCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-gold/10 border border-gold/40 rounded-xl px-4 py-3 mb-3">
-          <p className="text-xs sm:text-sm font-semibold text-gold-dark">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-mint/15 border border-mint/40 rounded-2xl px-4 py-3 mb-3 shadow-sm">
+          <p className="text-xs sm:text-sm font-bold text-mint-dark">
             {dirtyCount} player{dirtyCount > 1 ? "s have" : " has"} unsaved
             changes
           </p>
-          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto">
+          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-5 w-full sm:w-auto font-bold shadow-md shadow-mint/20">
             💾 Save All Changes
           </button>
         </div>
@@ -210,10 +226,10 @@ export default function Players() {
       {loading ? (
         <SkeletonTable rows={6} cols={10} />
       ) : (
-        <div className="card overflow-x-auto mt-3 scroll-touch">
+        <div className="card overflow-x-auto mt-3 scroll-touch shadow-sm border-mauve/20">
           <table className="w-full text-xs sm:text-sm min-w-[740px]">
             <thead>
-              <tr className="text-left text-black/50 border-b border-black/10">
+              <tr className="text-left text-mauve-dark border-b border-mauve/20">
                 <th className="py-2.5 pr-3">Photo</th>
                 <th className="py-2.5 pr-3">Name</th>
                 <th className="py-2.5 pr-3">Type</th>
@@ -234,7 +250,7 @@ export default function Players() {
                 return (
                   <tr
                     key={p._id}
-                    className={`border-b border-black/5 ${dirty ? "bg-gold/5" : ""}`}
+                    className={`border-b border-black/5 ${dirty ? "bg-mint/5" : ""}`}
                   >
                     <td className="py-2 pr-3">
                       <div className="flex flex-col items-center gap-1 w-16">
@@ -242,7 +258,7 @@ export default function Players() {
                           <img
                             src={e.photoUrl}
                             alt=""
-                            className="w-10 h-10 rounded-full object-cover"
+                            className="w-10 h-10 rounded-full object-cover border border-sky/30"
                             onError={(ev) => {
                               ev.target.style.display = "none";
                             }}
@@ -263,7 +279,7 @@ export default function Players() {
                         />
                         <label
                           htmlFor={inputId}
-                          className="text-[10px] text-turf font-semibold hover:underline cursor-pointer"
+                          className="text-[10px] text-turf font-bold hover:underline cursor-pointer hover:text-mint-dark"
                         >
                           {uploadingId === p._id ? "Uploading…" : "Change"}
                         </label>
@@ -317,14 +333,14 @@ export default function Players() {
                     </td>
                     <td className="py-2 pr-3">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                        className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
                           p.auctionStatus === "SOLD"
-                            ? "bg-green-100 text-green-700"
+                            ? "bg-mint/20 text-mint-dark border border-mint/40"
                             : p.auctionStatus === "UNSOLD"
-                              ? "bg-red-100 text-red-700"
+                              ? "bg-rose/20 text-rose border border-rose/40"
                               : p.auctionStatus === "IN_AUCTION"
-                                ? "bg-gold/20 text-gold-dark"
-                                : "bg-black/5 text-black/50"
+                                ? "bg-orchid/20 text-orchid-dark border border-orchid/40"
+                                : "bg-sky/15 text-turf border border-sky/30"
                         }`}
                       >
                         {p.auctionStatus}
@@ -341,7 +357,7 @@ export default function Players() {
                         </button>
                         <button
                           onClick={() => deletePlayer(p._id)}
-                          className="text-clay text-xs hover:underline px-1.5 py-1"
+                          className="text-rose text-xs hover:underline px-1.5 py-1 font-semibold"
                         >
                           Remove
                         </button>

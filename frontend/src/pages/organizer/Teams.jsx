@@ -128,7 +128,20 @@ export default function Teams() {
     }
   }
 
+  const [searchQuery, setSearchQuery] = useState("");
   const dirtyCount = teams.filter(isDirty).length;
+
+  const visibleTeams = teams.filter((t) => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const nameMatch = (t.teamName || "").toLowerCase().includes(q);
+      const ownerMatch = (t.ownerName || "").toLowerCase().includes(q);
+      const phoneMatch = (t.phone || "").toLowerCase().includes(q);
+      return nameMatch || ownerMatch || phoneMatch;
+    }
+    return true;
+  });
+
   async function saveAll() {
     setStatus({ type: "", message: "" });
     const dirtyTeams = teams.filter(isDirty);
@@ -147,14 +160,22 @@ export default function Teams() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-turf">Teams</h1>
-          <p className="text-black/50 text-xs sm:text-sm mt-0.5">
-            Approve teams and manage owners before auction starts. Nothing is
-            saved until you click Save. Updates live as teams register.
+          <p className="text-mauve-dark text-xs sm:text-sm mt-0.5">
+            Approve teams and manage owners before auction starts.
           </p>
         </div>
-        <button className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto shrink-0" onClick={() => setShowAdd((s) => !s)}>
-          {showAdd ? "✕ Cancel" : "+ Add Team Manually"}
-        </button>
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="🔍 Search team, owner..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input-field w-full sm:w-48 text-xs py-2"
+          />
+          <button className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto shrink-0 font-bold" onClick={() => setShowAdd((s) => !s)}>
+            {showAdd ? "✕ Cancel" : "+ Add Team Manually"}
+          </button>
+        </div>
       </div>
 
       {showAdd && (
@@ -199,12 +220,12 @@ export default function Teams() {
       )}
 
       {dirtyCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-gold/10 border border-gold/40 rounded-xl px-4 py-3 mb-3">
-          <p className="text-xs sm:text-sm font-semibold text-gold-dark">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-mint/15 border border-mint/40 rounded-2xl px-4 py-3 mb-3 shadow-sm">
+          <p className="text-xs sm:text-sm font-bold text-mint-dark">
             {dirtyCount} team{dirtyCount > 1 ? "s have" : " has"} unsaved
             changes
           </p>
-          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-4 w-full sm:w-auto">
+          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-5 w-full sm:w-auto font-bold shadow-md shadow-mint/20">
             💾 Save All Changes
           </button>
         </div>
@@ -215,10 +236,10 @@ export default function Teams() {
       {loading ? (
         <SkeletonTable rows={5} cols={7} />
       ) : (
-        <div className="card overflow-x-auto mt-3 scroll-touch">
+        <div className="card overflow-x-auto mt-3 scroll-touch shadow-sm border-mauve/20">
           <table className="w-full text-xs sm:text-sm min-w-[620px]">
             <thead>
-              <tr className="text-left text-black/50 border-b border-black/10">
+              <tr className="text-left text-mauve-dark border-b border-mauve/20">
                 <th className="py-2.5 pr-3">Team</th>
                 <th className="py-2.5 pr-3">Owner</th>
                 <th className="py-2.5 pr-3">Plays?</th>
@@ -230,24 +251,24 @@ export default function Teams() {
               </tr>
             </thead>
             <tbody>
-              {teams.map((t) => {
+              {visibleTeams.map((t) => {
                 const e = getEdit(t._id);
                 const dirty = isDirty(t);
                 return (
                   <tr
                     key={t._id}
-                    className={`border-b border-black/5 ${dirty ? "bg-gold/5" : ""}`}
+                    className={`border-b border-black/5 ${dirty ? "bg-mint/5" : ""}`}
                   >
                     <td className="py-2 pr-3 font-medium">
                       <div className="flex items-center gap-2">
                         {t.teamLogoUrl && (
                           <img
                             src={t.teamLogoUrl}
-                            className="w-7 h-7 rounded-full object-cover"
+                            className="w-7 h-7 rounded-full object-cover border border-sky/30"
                             alt=""
                           />
                         )}
-                        {t.teamName}
+                        <span className="text-turf font-bold">{t.teamName}</span>
                         {dirty && (
                           <span className="badge-unsaved">● unsaved</span>
                         )}
@@ -272,7 +293,7 @@ export default function Teams() {
                         <input
                           type="text"
                           maxLength={6}
-                          className="input-field py-0.5 px-2 text-xs font-mono font-bold w-16 text-center"
+                          className="input-field py-0.5 px-2 text-xs font-mono font-bold w-16 text-center text-mint-dark"
                           value={e.biddingPin || ""}
                           onChange={(ev) => setEdit(t._id, { biddingPin: ev.target.value })}
                           title="4-digit secret bidding PIN"
@@ -283,14 +304,14 @@ export default function Teams() {
                             navigator.clipboard.writeText(e.biddingPin || t.biddingPin);
                             showToast(`Copied PIN ${e.biddingPin || t.biddingPin} for ${t.teamName}`, "success");
                           }}
-                          className="text-[11px] p-1 rounded bg-black/5 hover:bg-black/10 text-black/70"
+                          className="text-[11px] p-1 rounded bg-sky/20 hover:bg-sky/30 text-turf"
                           title="Copy PIN"
                         >
                           📋
                         </button>
                       </div>
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2 pr-3 font-medium">
                       Rs. {t.purseRemaining?.toLocaleString("en-IN")} /{" "}
                       {t.totalPurse?.toLocaleString("en-IN")}
                     </td>
@@ -305,7 +326,7 @@ export default function Teams() {
                         </button>
                         <button
                           onClick={() => deleteTeam(t._id)}
-                          className="text-clay text-xs hover:underline px-1.5 py-1"
+                          className="text-rose text-xs hover:underline px-1.5 py-1 font-semibold"
                         >
                           Remove
                         </button>

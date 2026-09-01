@@ -52,15 +52,18 @@ export default function PlayerRegister() {
     }
   }
 
-  if (loading) return <Center><p>Loading tournament details…</p></Center>;
+  if (loading) return <Center><p className="text-turf/70 font-medium">Loading tournament details…</p></Center>;
   if (!info) return <Center><StatusMessage type="error" message={status.message || 'Tournament not found.'} /></Center>;
 
   if (done) {
     return (
       <Center>
-        <div className="card max-w-md text-center">
-          <h2 className="font-display text-3xl text-turf mb-2">You're In! 🏏</h2>
-          <p className="text-black/70">Your registration for <strong>{info.tournamentName}</strong> is confirmed. The organizer will contact you with further auction details.</p>
+        <div className="card max-w-md text-center shadow-lg border-mint/40">
+          <div className="w-16 h-16 bg-mint/20 text-mint rounded-2xl flex items-center justify-center mx-auto text-3xl mb-3 shadow-inner">
+            🏏
+          </div>
+          <h2 className="font-display text-3xl text-turf mb-2">You're In!</h2>
+          <p className="text-mauve-dark text-sm">Your registration for <strong>{info.tournamentName}</strong> is confirmed. The organizer will contact you with further auction details.</p>
         </div>
       </Center>
     );
@@ -76,11 +79,11 @@ export default function PlayerRegister() {
 
   return (
     <Center>
-      <form onSubmit={handleSubmit} className="card max-w-lg w-full space-y-4">
+      <form onSubmit={handleSubmit} className="card max-w-lg w-full space-y-4 shadow-lg border-mauve/30">
         <div className="text-center mb-2">
-          {info.logoUrl && <img src={info.logoUrl} className="w-16 h-16 mx-auto rounded-full object-cover mb-2" alt="" />}
+          {info.logoUrl && <img src={info.logoUrl} className="w-16 h-16 mx-auto rounded-full object-cover mb-2 border border-sky/30" alt="" />}
           <h1 className="font-display text-3xl text-turf">{info.tournamentName}</h1>
-          <p className="text-sm text-black/50">Player Auction Registration · {info.slotsLeft.players} slots left</p>
+          <p className="text-sm text-mauve-dark">Player Auction Registration · {info.slotsLeft.players} slots left</p>
         </div>
 
         <div>
@@ -99,45 +102,42 @@ export default function PlayerRegister() {
           <div>
             <label className="label-text">Bowling Style</label>
             <select className="input-field" value={form.bowlingStyle} onChange={e => update('bowlingStyle', e.target.value)}>
-              <option value="NA">Does not bowl</option>
-              <option value="RIGHT_HANDED">Right Handed</option>
-              <option value="LEFT_HANDED">Left Handed</option>
+              <option value="NA">Doesn't Bowl</option>
+              <option value="RIGHT_ARM_FAST">Right-arm Fast</option>
+              <option value="RIGHT_ARM_SPIN">Right-arm Spin</option>
+              <option value="LEFT_ARM_FAST">Left-arm Fast</option>
+              <option value="LEFT_ARM_SPIN">Left-arm Spin</option>
             </select>
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
-            <label className="label-text">Player Type</label>
+            <label className="label-text">Primary Role</label>
             <select className="input-field" value={form.playerType} onChange={e => update('playerType', e.target.value)}>
               <option value="BATSMAN">Batsman</option>
               <option value="BOWLER">Bowler</option>
-              <option value="ALLROUNDER">All-rounder</option>
+              <option value="ALL_ROUNDER">All Rounder</option>
+              <option value="WICKET_KEEPER">Wicket Keeper</option>
             </select>
           </div>
           <div>
             <label className="label-text">Age</label>
-            <input required type="number" min="10" max="70" className="input-field" value={form.age} onChange={e => update('age', e.target.value)} />
+            <input required type="number" min="8" max="75" className="input-field" value={form.age} onChange={e => update('age', e.target.value)} />
           </div>
         </div>
 
         <div>
-          <label className="label-text">Phone Number</label>
-          <input className="input-field" value={form.phone} onChange={e => update('phone', e.target.value)} />
+          <label className="label-text">WhatsApp Phone</label>
+          <input required type="tel" className="input-field" value={form.phone} onChange={e => update('phone', e.target.value)} />
         </div>
 
-        <ImageUpload label="Your Photo" onUploaded={(url) => update('photoUrl', url)} />
-
-        {info.playerRegistrationFee > 0 && (
-          <p className="text-sm text-turf font-semibold bg-gold/15 px-3 py-2 rounded-lg text-center">
-            Registration Fee: Rs. {info.playerRegistrationFee}
-          </p>
-        )}
+        <ImageUpload label="Profile Photo (optional)" onUploaded={(url) => update('photoUrl', url)} />
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3">
-          {submitting ? 'Processing…' : info.playerRegistrationFee > 0 ? `Pay Rs. ${info.playerRegistrationFee} & Register` : 'Register for Auction'}
+        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25">
+          {submitting ? 'Registering…' : info.fees?.playerRegistration ? `Pay ₹${info.fees.playerRegistration} & Register` : 'Complete Registration'}
         </button>
       </form>
     </Center>
@@ -145,5 +145,5 @@ export default function PlayerRegister() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-turf/5 to-ivory">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 bg-gradient-to-b from-sky/15 via-ivory to-orchid/10">{children}</div>;
 }

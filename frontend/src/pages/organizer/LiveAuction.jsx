@@ -8,6 +8,9 @@ import { useToast } from "../../context/ToastContext";
 import PlayerPhoto from "../../components/PlayerPhoto";
 import AuctionStampOverlay from "../../components/AuctionStampOverlay";
 import VoiceSettingsModal from "../../components/VoiceSettingsModal";
+import StreamOverlayModal from "../../components/StreamOverlayModal";
+import LiveCommentaryFeed from "../../components/LiveCommentaryFeed";
+import DemoSimulatorModal from "../../components/DemoSimulatorModal";
 import { getSocket, emitWithAck } from "../../socket";
 import {
   unlockAudio,
@@ -24,6 +27,16 @@ import {
   announceUnsold,
   stopCommentary,
 } from "../../utils/commentaryService";
+import {
+  createIntroCommentary,
+  createBidCommentary,
+  createWarningCommentary,
+  createSoldCommentary,
+  createUnsoldCommentary,
+  createAnnouncementCommentary,
+  createRoundCommentary,
+  buildHistoricalTimeline,
+} from "../../utils/liveCommentaryEngine";
 
 export default function LiveAuction() {
   const { showToast } = useToast();
@@ -35,9 +48,15 @@ export default function LiveAuction() {
   const [busy, setBusy] = useState(false); // true while any action request is in flight
   const [pendingTeamId, setPendingTeamId] = useState(null); // which team's bid button is currently mid-click
   const [showVideo, setShowVideo] = useState(false); // whether the auctioneer's video broadcast panel is open
+  const [showOverlayModal, setShowOverlayModal] = useState(false); // OBS stream overlay config modal
+  const [showDemoModal, setShowDemoModal] = useState(false); // Demo tournament practice modal
+  const [botActive, setBotActive] = useState(false); // AI bot auto-bidder practice simulator
+  const [botSpeed, setBotSpeed] = useState("normal"); // 'normal' (2.5s) | 'fast' (1.3s) | 'intense' (0.8s)
   const [stampData, setStampData] = useState(null); // { result: 'SOLD' | 'UNSOLD', player, team, finalPrice }
   const [timeLeft, setTimeLeft] = useState(null); // in seconds
   const [showVoiceSettingsModal, setShowVoiceSettingsModal] = useState(false);
+  const [activeTab, setActiveTab] = useState("commentary"); // 'commentary' | 'bidHistory'
+  const [commentaryItems, setCommentaryItems] = useState([]);
   const [commentaryEnabled, setCommentaryEnabled] = useState(() => {
     return localStorage.getItem("aiCommentary_organizer") === "true";
   });
@@ -147,7 +166,63 @@ export default function LiveAuction() {
         setState(payload.state);
       }
 
-      // Play sound and voice commentary cues based on event type
+      // 1. Text Commentary Stream Engine
+      switch (payload?.event) {
+        case "NEXT_PLAYER":
+          if (payload?.state?.currentPlayer) {
+            const intro = createIntroCommentary(payload.state.currentPlayer, payload.state.currentCategory);
+            if (intro) setCommentaryItems((prev) => [intro, ...prev]);
+          }
+          break;
+        case "BID_PLACED":
+          if (payload?.state?.currentBidTeam) {
+            const history = payload.state.currentBidHistory || [];
+            const count = history.length;
+            const prevTeam = count > 1 ? history[count - 2]?.team?.teamName : null;
+            const bidCommentary = createBidCommentary(
+              payload.state.currentPlayer,
+              payload.state.currentBidTeam,
+              payload.state.currentBidAmount,
+              count,
+              prevTeam
+            );
+            if (bidCommentary) setCommentaryItems((prev) => [bidCommentary, ...prev]);
+          }
+          break;
+        case "PLAYER_SOLD":
+          {
+            const soldItem = createSoldCommentary(
+              payload.player,
+              payload.team,
+              payload.finalPrice || payload.player?.soldPrice,
+              lastBidCountRef.current
+            );
+            if (soldItem) setCommentaryItems((prev) => [soldItem, ...prev]);
+          }
+          break;
+        case "PLAYER_UNSOLD":
+          {
+            const unsoldItem = createUnsoldCommentary(payload.player);
+            if (unsoldItem) setCommentaryItems((prev) => [unsoldItem, ...prev]);
+          }
+          break;
+        case "ANNOUNCEMENT":
+          {
+            const annItem = createAnnouncementCommentary(payload.message, payload.author);
+            if (annItem) setCommentaryItems((prev) => [annItem, ...prev]);
+          }
+          break;
+        case "RE_AUCTION_STARTED":
+          {
+            const roundItem = createRoundCommentary(payload.round);
+            if (roundItem) setCommentaryItems((prev) => [roundItem, ...prev]);
+          }
+          break;
+        default:
+          break;
+      }
+
+      // 2. Play sound and voice commentary cues based on event type
       if (commentaryEnabledRef.current) {
         switch (payload?.event) {
           case "NEXT_PLAYER":
@@ -215,6 +290,16 @@ export default function LiveAuction() {
     };
     // eslint-disable-next-line
   }, []);
+
+  const handlePostAnnouncement = async (message) => {
+    const token = localStorage.getItem("organizerToken");
+    const res = await emitWithAck("auction:post-announcement", {
+      token,
+      message,
+      author: info.tournamentName || "Auctioneer",
+    });
+    if (!res?.ok) throw new Error(res?.message || "Failed to broadcast announcement");
+  };
 
   // Used for actions that structurally change data (category/queue/player transitions) —
   // these still do a full refresh since teams/queue/categories may all need to update.
@@ -348,6 +433,54 @@ export default function LiveAuction() {
   const reAuction = () =>
     callAction(() => api.post("/auction/re-auction-unsold"));
 
+  // AI Bot Auto-Bidder Practice Simulator Engine
+  const botTargetBidsRef = useRef(5);
+
+  useEffect(() => {
+    if (state?.currentPlayer?._id) {
+      // Random target between 3 and 7 bids per player
+      botTargetBidsRef.current = Math.floor(Math.random() * 5) + 3;
+    }
+  }, [state?.currentPlayer?._id]);
+
+  useEffect(() => {
+    if (!botActive || !state?.currentPlayer || busy) return;
+
+    const delayMs = botSpeed === "intense" ? 800 : botSpeed === "fast" ? 1300 : 2400;
+
+    const botTimer = setTimeout(() => {
+      if (!botActive || busy || pendingTeamId) return;
+
+      const bidHistory = state.currentBidHistory || [];
+      if (bidHistory.length >= botTargetBidsRef.current) {
+        // Reached realistic bot bidding duel cap — allow timer / organizer to gavel SOLD
+        return;
+      }
+
+      const currentBidTeamId = (state.currentBidTeam?._id || state.currentBidTeam || "").toString();
+      const currentAmt = state.currentBidAmount || state.currentPlayer.basePrice || 0;
+      const passedSet = new Set((state.passedTeams || []).map((t) => (t._id || t).toString()));
+
+      // Find teams eligible to bid
+      const eligibleTeams = teams.filter((t) => {
+        const tid = t._id.toString();
+        if (tid === currentBidTeamId) return false;
+        if (passedSet.has(tid)) return false;
+        return (t.purseRemaining || 0) > currentAmt;
+      });
+
+      if (eligibleTeams.length === 0) return;
+
+      // Pick a random eligible team
+      const chosenTeam = eligibleTeams[Math.floor(Math.random() * eligibleTeams.length)];
+      if (chosenTeam && chosenTeam._id) {
+        placeBid(chosenTeam._id);
+      }
+    }, delayMs);
+
+    return () => clearTimeout(botTimer);
+  }, [botActive, botSpeed, state?.currentPlayer, state?.currentBidTeam, state?.currentBidAmount, state?.currentBidHistory, state?.passedTeams, teams, busy, pendingTeamId]);
+
   if (!state)
     return (
       <OrganizerLayout>
@@ -378,6 +511,21 @@ export default function LiveAuction() {
         onClose={() => setShowVoiceSettingsModal(false)}
       />
 
+      {/* OBS Stream Overlay Setup Modal */}
+      <StreamOverlayModal
+        isOpen={showOverlayModal}
+        onClose={() => setShowOverlayModal(false)}
+        slug={info.slug}
+        tournamentName={info.tournamentName}
+      />
+
+      {/* Demo Tournament Simulator Modal */}
+      <DemoSimulatorModal
+        isOpen={showDemoModal}
+        onClose={() => setShowDemoModal(false)}
+        onDataChanged={refresh}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-1">
         <h1 className="font-display text-2xl sm:text-3xl text-turf">Live Auction</h1>
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -388,13 +536,13 @@ export default function LiveAuction() {
           )}
 
           {/* AI Voice Toggle & Voice Selector Button */}
-          <div className="flex items-center rounded-lg overflow-hidden shadow-sm">
+          <div className="flex items-center rounded-xl overflow-hidden shadow-sm border border-mauve/30">
             <button
               onClick={toggleCommentary}
-              className={`text-xs sm:text-sm py-2 px-3 font-semibold transition-all duration-150 active:scale-95 flex items-center gap-1.5 ${
+              className={`text-xs sm:text-sm py-2 px-3.5 font-bold transition-all duration-150 active:scale-95 flex items-center gap-1.5 ${
                 commentaryEnabled
-                  ? "bg-gold text-turf-dark"
-                  : "bg-black/10 hover:bg-black/15 text-black/70"
+                  ? "bg-mint text-turf-dark"
+                  : "bg-black/10 hover:bg-black/15 text-turf"
               }`}
             >
               <span>🎙️</span>
@@ -408,14 +556,34 @@ export default function LiveAuction() {
               title="Change Voice Tone & Accent (5 Options)"
               className={`text-xs sm:text-sm py-2 px-2.5 font-semibold border-l transition-all duration-150 active:scale-95 flex items-center gap-1 ${
                 commentaryEnabled
-                  ? "bg-gold hover:bg-gold-dark text-turf-dark border-turf-dark/20"
-                  : "bg-black/10 hover:bg-black/20 text-black/70 border-black/10"
+                  ? "bg-mint hover:bg-mint-dark text-turf-dark border-turf-dark/20"
+                  : "bg-black/10 hover:bg-black/20 text-turf border-black/10"
               }`}
             >
               <span>⚙️</span>
               <span className="hidden sm:inline">Voice</span>
             </button>
           </div>
+
+          {/* OBS Stream Overlay Button */}
+          <button
+            onClick={() => setShowOverlayModal(true)}
+            className="inline-flex items-center gap-1.5 btn-primary text-xs sm:text-sm py-2 px-3 sm:px-4 shadow-sm font-bold"
+            title="Open OBS / vMix Live Stream Overlay Link Generator"
+          >
+            <span>🎥</span>
+            <span>OBS Overlay</span>
+          </button>
+
+          {/* Demo Simulator Launcher Button */}
+          <button
+            onClick={() => setShowDemoModal(true)}
+            className="inline-flex items-center gap-1.5 bg-white hover:bg-sky/20 text-turf border border-mauve/35 font-bold text-xs sm:text-sm py-2 px-3 sm:px-4 rounded-xl shadow-sm transition-all duration-150 active:scale-95"
+            title="Open Demo & Practice Auction Simulator"
+          >
+            <span>🎮</span>
+            <span>Practice Simulator</span>
+          </button>
 
           <button
             onClick={() => {
@@ -428,6 +596,84 @@ export default function LiveAuction() {
           </button>
         </div>
       </div>
+
+      {/* Practice Simulator Control Bar */}
+      <div className="mb-4 bg-gradient-to-r from-sky/25 via-orchid/20 to-mint/20 border border-mauve/30 rounded-2xl p-3 sm:p-4 text-turf shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-xl bg-mint/20 text-mint-dark flex items-center justify-center text-lg shrink-0 shadow-inner">
+            🤖
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-xs sm:text-sm text-turf">
+                AI Bot Auto-Bidder Simulator
+              </span>
+              <span
+                className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full font-bold ${
+                  botActive
+                    ? "bg-mint/25 text-mint-dark border border-mint/40 animate-pulse"
+                    : "bg-white/80 text-mauve-dark border border-mauve/25"
+                }`}
+              >
+                {botActive ? "Active & Bidding" : "Standby"}
+              </span>
+            </div>
+            <p className="text-[11px] text-mauve-dark font-medium">
+              Simulate realistic team bidding wars hands-free to test timers, commentary, and sound.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
+          {/* Speed Selector */}
+          <div className="flex items-center bg-white rounded-xl p-1 border border-mauve/25 text-xs shadow-inner">
+            <button
+              type="button"
+              onClick={() => setBotSpeed("normal")}
+              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+                botSpeed === "normal" ? "bg-mint text-turf-dark font-bold shadow-sm" : "text-mauve-dark hover:text-turf"
+              }`}
+            >
+              Realistic (2.4s)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBotSpeed("fast")}
+              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+                botSpeed === "fast" ? "bg-mint text-turf-dark font-bold shadow-sm" : "text-mauve-dark hover:text-turf"
+              }`}
+            >
+              Fast (1.3s)
+            </button>
+            <button
+              type="button"
+              onClick={() => setBotSpeed("intense")}
+              className={`px-2.5 py-1 rounded-lg font-medium transition ${
+                botSpeed === "intense" ? "bg-rose text-white font-bold shadow-sm" : "text-mauve-dark hover:text-turf"
+              }`}
+            >
+              Duel 🔥
+            </button>
+          </div>
+
+          {/* Toggle Bot ON/OFF */}
+          <button
+            type="button"
+            onClick={() => {
+              unlockAudio();
+              setBotActive((a) => !a);
+            }}
+            className={`text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 ${
+              botActive
+                ? "bg-rose hover:bg-rose-dark text-white"
+                : "bg-mint hover:bg-mint-dark text-turf-dark"
+            }`}
+          >
+            <span>{botActive ? "⏹ Stop Bots" : "▶ Start Auto-Bots"}</span>
+          </button>
+        </div>
+      </div>
+
       <p className="text-xs sm:text-sm text-black/50 mb-4 sm:mb-6">
         Round {state.currentRound}
         {currentCategory ? ` · Category: ${currentCategory.name}` : ""}
@@ -454,10 +700,10 @@ export default function LiveAuction() {
                   key={c._id}
                   disabled={busy}
                   onClick={() => selectCategory(c._id)}
-                  className={`text-left border-2 rounded-xl p-3 transition-colors active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${currentCategory?._id === c._id ? "border-gold bg-gold/10" : "border-black/10 hover:border-black/25"}`}
+                  className={`text-left border-2 rounded-2xl p-3.5 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${currentCategory?._id === c._id ? "border-mint bg-mint/15 shadow-sm" : "border-mauve/30 hover:border-mint/60"}`}
                 >
-                  <p className="font-semibold text-xs sm:text-sm truncate">{c.name}</p>
-                  <p className="text-[11px] sm:text-xs text-black/60 mt-0.5">
+                  <p className="font-semibold text-xs sm:text-sm truncate text-turf">{c.name}</p>
+                  <p className="text-[11px] sm:text-xs text-mauve-dark mt-0.5">
                     Base: Rs. {c.basePrice}
                   </p>
                 </button>
@@ -490,10 +736,10 @@ export default function LiveAuction() {
                   {queuePlayers.map((p, i) => (
                     <li
                       key={p._id}
-                      className="px-3 py-2 rounded-lg bg-turf/5 border border-black/5 flex items-center justify-between"
+                      className="px-3 py-2 rounded-xl bg-sky/10 border border-sky/20 flex items-center justify-between"
                     >
-                      <span className="truncate font-medium">{i + 1}. {p.name}</span>
-                      <span className="text-xs text-black/50 shrink-0 ml-2">{p.playerType}</span>
+                      <span className="truncate font-medium text-turf">{i + 1}. {p.name}</span>
+                      <span className="text-xs text-mauve-dark shrink-0 ml-2">{p.playerType}</span>
                     </li>
                   ))}
                 </ol>
@@ -507,10 +753,10 @@ export default function LiveAuction() {
 
           {/* STEP 3: Start auction */}
           {currentCategory && queuePlayers.length > 0 && (
-            <div className="card text-center py-6 sm:py-8">
+            <div className="card text-center py-6 sm:py-8 shadow-md border-mint/30">
               <h2 className="font-semibold text-sm sm:text-base mb-3">Step 3 — Start the Auction</h2>
               <button
-                className="btn-primary py-3 px-6 text-base disabled:opacity-50 shadow-md"
+                className="btn-primary py-3 px-8 text-base disabled:opacity-50 shadow-lg shadow-mint/25 font-bold"
                 disabled={busy}
                 onClick={() => nextPlayer()}
               >
@@ -531,62 +777,62 @@ export default function LiveAuction() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mt-3">
-          <div className="lg:col-span-1 card text-center p-4 sm:p-5">
+          <div className="lg:col-span-1 card text-center p-4 sm:p-5 shadow-lg border-mauve/20">
             <PlayerPhoto src={currentPlayer.photoUrl} sizeClass="w-32 h-32 sm:w-40 sm:h-40" />
-            <h2 className="font-display text-2xl sm:text-3xl text-turf">
+            <h2 className="font-display text-2xl sm:text-3xl text-turf mt-2">
               {currentPlayer.name}
             </h2>
-            <p className="text-black/60 text-xs sm:text-sm">
+            <p className="text-mauve-dark text-xs sm:text-sm">
               {currentPlayer.playerType} · Age {currentPlayer.age}
             </p>
-            <p className="text-black/60 text-xs sm:text-sm">
+            <p className="text-mauve-dark text-xs sm:text-sm">
               Bat: {currentPlayer.battingStyle.replace("_", " ")}
             </p>
-            <p className="text-black/60 text-xs sm:text-sm mb-4">
+            <p className="text-mauve-dark text-xs sm:text-sm mb-4">
               Bowl: {currentPlayer.bowlingStyle.replace("_", " ")}
             </p>
 
             {/* Synchronized Countdown Timer (when Countdown is ON) */}
             {state.countdownEnabled && timeLeft !== null && (
               <div
-                className={`rounded-xl p-3 border mb-3 transition-all duration-300 ${
+                className={`rounded-2xl p-3 border mb-3 transition-all duration-300 ${
                   timeLeft <= 5
-                    ? "bg-red-500/15 border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-timer-heartbeat"
+                    ? "bg-rose/15 border-rose/50 shadow-[0_0_15px_rgba(222,108,131,0.3)] animate-timer-heartbeat"
                     : timeLeft <= 15
-                    ? "bg-amber-500/10 border-amber-500/40"
-                    : "bg-turf/5 border-turf/20"
+                    ? "bg-orchid/15 border-orchid/40"
+                    : "bg-mint/10 border-mint/30"
                 }`}
               >
-                <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-black/60 flex items-center justify-center gap-1.5">
+                <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-mauve-dark flex items-center justify-center gap-1.5">
                   <span>⏱️</span>
                   <span>{timeLeft <= 5 ? "Bidding Ending Soon!" : "Auction Countdown"}</span>
                 </p>
                 <p
                   className={`font-display text-3xl sm:text-4xl font-bold tracking-widest mt-0.5 ${
                     timeLeft <= 5
-                      ? "text-red-600"
+                      ? "text-rose"
                       : timeLeft <= 15
-                      ? "text-amber-600"
-                      : "text-turf"
+                      ? "text-orchid-dark"
+                      : "text-mint-dark"
                   }`}
                 >
                   {formatTime(timeLeft)}
                 </p>
                 {timeLeft === 0 && (
-                  <p className="text-[10px] text-red-600 font-semibold animate-pulse mt-0.5">
+                  <p className="text-[10px] text-rose font-semibold animate-pulse mt-0.5">
                     Time expired · Finalizing result…
                   </p>
                 )}
               </div>
             )}
 
-            <div className="bg-gold/15 rounded-xl p-4 border border-gold/30">
-              <p className="text-[11px] sm:text-xs text-black/60 font-medium uppercase tracking-wider">Current Bid</p>
-              <p className="font-display text-3xl sm:text-4xl text-gold-dark mt-0.5">
+            <div className="bg-mint/15 rounded-2xl p-4 border border-mint/30 shadow-inner">
+              <p className="text-[11px] sm:text-xs text-mauve-dark font-semibold uppercase tracking-wider">Current Bid</p>
+              <p className="font-display text-3xl sm:text-4xl text-mint-dark mt-0.5 font-bold">
                 Rs. {state.currentBidAmount.toLocaleString("en-IN")}
               </p>
               {state.currentBidTeam && (
-                <p className="text-xs sm:text-sm mt-1.5 font-semibold text-turf flex items-center justify-center gap-1.5">
+                <p className="text-xs sm:text-sm mt-1.5 font-bold text-turf flex items-center justify-center gap-1.5">
                   <span>by</span>
                   <span className="truncate max-w-[180px]">{state.currentBidTeam.teamName}</span>
                 </p>
@@ -596,14 +842,14 @@ export default function LiveAuction() {
               <button
                 onClick={markSold}
                 disabled={busy}
-                className="btn-primary py-2.5 text-sm disabled:opacity-50"
+                className="btn-primary py-2.5 text-sm disabled:opacity-50 font-bold shadow-sm shadow-mint/20"
               >
                 Mark SOLD
               </button>
               <button
                 onClick={markUnsold}
                 disabled={busy}
-                className="btn-danger py-2.5 text-sm disabled:opacity-50"
+                className="btn-danger py-2.5 text-sm disabled:opacity-50 font-bold shadow-sm shadow-rose/20"
               >
                 Mark UNSOLD
               </button>
@@ -620,7 +866,7 @@ export default function LiveAuction() {
               ↩ Undo Last Bid
             </button>
             {queuePlayers.length > 0 && (
-              <p className="text-xs text-black/40 mt-3">
+              <p className="text-xs text-mauve-dark mt-3">
                 {queuePlayers.length} more player(s) queued in this category
               </p>
             )}
@@ -641,9 +887,9 @@ export default function LiveAuction() {
                         key={t._id}
                         onClick={() => placeBid(t._id)}
                         disabled={busy || isHighestBidder}
-                        className={`card text-left border-2 transition-all duration-150 active:scale-95 active:bg-gold/20 p-3 sm:p-4 select-none
+                        className={`card text-left border-2 transition-all duration-150 active:scale-95 active:bg-mint/20 p-3 sm:p-4 select-none
                         disabled:cursor-not-allowed
-                        ${isHighestBidder ? "border-gold bg-gold/10 shadow-md ring-2 ring-gold/40" : "border-black/10 hover:border-gold hover:shadow-md"}
+                        ${isHighestBidder ? "border-mint bg-mint/15 shadow-md ring-2 ring-mint/40" : "border-mauve/20 hover:border-mint hover:shadow-md"}
                         ${hasPassed ? "bg-slate-100/70 border-slate-300 opacity-75" : ""}
                         ${busy && !isHighestBidder ? "opacity-50" : ""}`}
                       >
@@ -668,17 +914,17 @@ export default function LiveAuction() {
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] sm:text-xs text-black/60 truncate">
+                        <p className="text-[11px] sm:text-xs text-mauve-dark truncate">
                           Purse left: Rs.{" "}
                           {t.purseRemaining.toLocaleString("en-IN")}
                         </p>
                         {isPending && (
-                          <p className="text-[11px] sm:text-xs text-gold-dark font-semibold mt-1.5 animate-pulse">
+                          <p className="text-[11px] sm:text-xs text-mint-dark font-semibold mt-1.5 animate-pulse">
                             Placing bid…
                           </p>
                         )}
                         {isHighestBidder && !isPending && (
-                          <p className="text-[11px] sm:text-xs text-gold-dark font-bold mt-1.5 flex items-center gap-1">
+                          <p className="text-[11px] sm:text-xs text-mint-dark font-bold mt-1.5 flex items-center gap-1">
                             <span>✓</span> <span>Highest Bidder</span>
                           </p>
                         )}
@@ -688,31 +934,81 @@ export default function LiveAuction() {
               </div>
             </div>
 
-            <div className="card">
-              <h3 className="font-semibold text-sm sm:text-base mb-2.5">
-                Bid History — {currentPlayer.name}
-              </h3>
-              {state.currentBidHistory && state.currentBidHistory.length > 0 ? (
-                <ol className="space-y-1.5 max-h-56 sm:max-h-64 overflow-y-auto scroll-touch pr-1">
-                  {[...state.currentBidHistory].reverse().map((b, i) => (
-                    <li
-                      key={i}
-                      className={`flex justify-between items-center text-xs sm:text-sm px-3 py-2 rounded-lg transition-colors ${
-                        i === 0 ? "bg-gold/15 font-semibold border border-gold/30" : "bg-black/5"
-                      }`}
-                    >
-                      <span className="truncate max-w-[65%]">
-                        {state.currentBidHistory.length - i}.{" "}
-                        {b.team?.teamName || "Unknown Team"}
-                      </span>
-                      <span className="shrink-0 font-medium">Rs. {b.amount.toLocaleString("en-IN")}</span>
-                    </li>
-                  ))}
-                </ol>
+            {/* Tabbed Live Commentary Feed & Bid History */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("commentary")}
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    activeTab === "commentary"
+                      ? "bg-mint text-turf-dark shadow-sm font-extrabold"
+                      : "bg-black/10 text-turf hover:bg-black/15"
+                  }`}
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose"></span>
+                  </span>
+                  <span>📜 Live Commentary Stream</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("bidHistory")}
+                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 ${
+                    activeTab === "bidHistory"
+                      ? "bg-mint text-turf-dark shadow-sm font-extrabold"
+                      : "bg-black/10 text-turf hover:bg-black/15"
+                  }`}
+                >
+                  <span>⚡ Bid History</span>
+                  <span className="text-[10px] bg-black/10 px-2 py-0.5 rounded-full font-mono">
+                    {state.currentBidHistory?.length || 0}
+                  </span>
+                </button>
+              </div>
+
+              {activeTab === "commentary" ? (
+                <div className="h-[360px]">
+                  <LiveCommentaryFeed
+                    items={commentaryItems}
+                    isOrganizer={true}
+                    onPostAnnouncement={handlePostAnnouncement}
+                    tournamentName={info.tournamentName || "Tournament"}
+                  />
+                </div>
               ) : (
-                <p className="text-black/40 text-xs sm:text-sm py-3">
-                  No bids placed yet for this player.
-                </p>
+                <div className="card">
+                  <h3 className="font-semibold text-sm sm:text-base mb-2.5 flex items-center justify-between">
+                    <span>Bid History — {currentPlayer.name}</span>
+                    <span className="text-xs text-gold-dark font-mono font-bold">
+                      {state.currentBidHistory?.length || 0} Bids
+                    </span>
+                  </h3>
+                  {state.currentBidHistory && state.currentBidHistory.length > 0 ? (
+                    <ol className="space-y-1.5 max-h-56 sm:max-h-64 overflow-y-auto scroll-touch pr-1">
+                      {[...state.currentBidHistory].reverse().map((b, i) => (
+                        <li
+                          key={i}
+                          className={`flex justify-between items-center text-xs sm:text-sm px-3 py-2 rounded-lg transition-colors ${
+                            i === 0 ? "bg-gold/15 font-semibold border border-gold/30" : "bg-black/5"
+                          }`}
+                        >
+                          <span className="truncate max-w-[65%]">
+                            {state.currentBidHistory.length - i}.{" "}
+                            {b.team?.teamName || "Unknown Team"}
+                          </span>
+                          <span className="shrink-0 font-medium">Rs. {b.amount.toLocaleString("en-IN")}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="text-black/40 text-xs sm:text-sm py-3">
+                      No bids placed yet for this player.
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>
