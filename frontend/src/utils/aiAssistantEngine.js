@@ -372,6 +372,43 @@ Download print-ready tournament summaries from **History & Downloads**:
 `
   },
   {
+    id: "auction_analyst_studio",
+    triggers: [
+      "analyst", "analytics", "analysis", "data analyst", "auction summary", "summary tool",
+      "squad balance", "inflation", "bidding wars", "steals", "bargains", "head to head",
+      "executive summary", "market dynamics", "price tier", "ask analyst", "ai analyst"
+    ],
+    title: "📈 Auction Analyst Studio & Data Intelligence",
+    summary: "Deep-dive economy metrics, squad balance grades, price tiers, and AI Q&A.",
+    content: `
+### 📈 Auction Analyst Studio & Data Intelligence
+
+Auction Arena provides a dedicated **Auction Analyst Studio** at \`/organizer/analytics\`:
+
+1. **📊 Executive Summary & KPIs:**
+   * Live turnover, market inflation rate (+% over base price), clearance efficiency, and price tiers (Budget, Mid, Premium, Marquee).
+   * Automatically generated **AI Executive Summary narrative** with 1-click WhatsApp copy.
+
+2. **👥 Team Strategy & Squad Balance Matrix:**
+   * Squad Balance Scores (0–100) based on optimal role ratios (Batsmen, Bowlers, All-rounders).
+   * Letter grades (A+, A, B+, B, C) and strategy archetypes (*Batting Fortress, Bowling Powerhouse, Master Strategist*).
+   * **Head-to-Head Comparison Tool:** Select any two franchises to compare side-by-side!
+
+3. **🏏 Market Dynamics & Bidding Wars:**
+   * Top 10 Marquee Buys, Top 10 Value Steals (bought near base), and Top 10 Fiercest Bidding Wars.
+   * Unsold Player Diagnostics with recommended Round 2 base prices.
+
+4. **🔍 Interactive Player Query & Slicer:**
+   * Real-time multi-dimensional filter by Team, Role, Category, Price, and Status with live statistical calculations.
+
+5. **🤖 Ask AI Data Analyst:**
+   * Interactive conversational assistant that calculates tournament stats in natural language!
+
+6. **📥 Exports & Broadcasts:**
+   * Download complete CSV dataset, print-ready PDF executive reports, or copy pre-formatted WhatsApp summaries.
+`
+  },
+  {
     id: "simulator_demo",
     triggers: [
       "simulator", "demo", "practice", "mock auction", "ai bot", "test bidding",

@@ -16,12 +16,12 @@ async function getOrCreateState(organizerId) {
   return state;
 }
 
-const POPULATE_PATH = 'currentPlayer currentBidTeam currentCategory currentBidHistory.team passedTeams';
+const POPULATE_PATH = 'currentPlayer currentBidTeam currentCategory currentBidHistory.team passedTeams playerQueue';
 
 // Places the next-increment bid for a team on whichever player is currently up for auction.
-async function placeBid(organizerId, teamId) {
+async function placeBid(organizerId, teamId, { isOrganizer = false } = {}) {
   // Ultra-fast parallel database execution: fetch state, settings, team, and squad count simultaneously
-  const [state, settings, team, currentSquadSize] = await Promise.all([
+  let [state, settings, team, currentSquadSize] = await Promise.all([
     getOrCreateState(organizerId),
     AuctionSettings.findOne({ organizer: organizerId }).lean(),
     Team.findOne({ _id: teamId, organizer: organizerId }).lean(),
@@ -30,7 +30,10 @@ async function placeBid(organizerId, teamId) {
 
   if (!state.currentPlayer) throw new Error('No player currently in auction');
   if (!team) throw new Error('Team not found');
-  if (!settings) throw new Error('Auction settings not found');
+  if (!settings) {
+    const created = await AuctionSettings.create({ organizer: organizerId });
+    settings = created.toObject();
+  }
 
   // Server-side countdown validation: reject bids if time has expired
   if (state.countdownEnabled && state.biddingEndsAt) {
@@ -153,6 +156,9 @@ async function resolveSold(organizerId) {
 async function resolveUnsold(organizerId) {
   const state = await getOrCreateState(organizerId);
   if (!state.currentPlayer) throw new Error('No player currently in auction');
+  if (state.currentBidTeam || (state.currentBidHistory && state.currentBidHistory.length > 0)) {
+    throw new Error('Cannot mark player unsold after bids have been placed. Use Mark Sold or Undo Bid first.');
+  }
 
   const player = await Player.findById(state.currentPlayer);
   if (!player) throw new Error('Player not found');

@@ -4,6 +4,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const {
   getTournamentInfo, registerPlayer, verifyPlayerPayment, registerTeam, verifyTeamPayment,
   getLiveAuctionSpectatorView, getTeamsListForRemote, teamLogin, getTeamRemoteState,
+  teamBid, teamPass,
 } = require('../controllers/publicController');
 const analyticsCtrl = require('../controllers/analyticsController');
 
@@ -19,5 +20,7 @@ router.get('/:slug/live-auction', asyncHandler(getLiveAuctionSpectatorView));
 router.get('/:slug/teams-list', asyncHandler(getTeamsListForRemote));
 router.post('/:slug/team-login', asyncHandler(teamLogin));
 router.get('/:slug/team-remote-state', asyncHandler(getTeamRemoteState));
+router.post('/:slug/team-bid', asyncHandler(teamBid));
+router.post('/:slug/team-pass', asyncHandler(teamPass));
 
 module.exports = router;

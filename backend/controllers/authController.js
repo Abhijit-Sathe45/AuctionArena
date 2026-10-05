@@ -24,7 +24,14 @@ async function superAdminLogin(req, res) {
 async function organizerLogin(req, res) {
   const { loginId, password } = req.body;
   try {
-    const organizer = await Organizer.findOne({ loginId });
+    const normalized = (loginId || '').toLowerCase().trim();
+    const organizer = await Organizer.findOne({
+      $or: [
+        { loginId: normalized },
+        { email: normalized },
+        { loginId: (loginId || '').trim() },
+      ],
+    });
     if (!organizer) return res.status(401).json({ message: 'Invalid login ID or password' });
 
     const match = await bcrypt.compare(password, organizer.password);

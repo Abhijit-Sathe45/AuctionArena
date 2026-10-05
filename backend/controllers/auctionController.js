@@ -3,8 +3,6 @@ const AuctionLog = require('../models/AuctionLog');
 const AuctionSettings = require('../models/AuctionSettings');
 const Category = require('../models/Category');
 const Player = require('../models/Player');
-const Team = require('../models/Team');
-const { getNextBidAmount } = require('../utils/bidIncrement');
 const auctionService = require('../services/auctionService');
 const auctionTimerService = require('../services/auctionTimerService');
 
@@ -28,8 +26,12 @@ function shuffleArray(arr) {
 // GET /api/auction/state
 async function getState(req, res) {
   const state = await getOrCreateState(req.user.id);
-  await state.populate('currentPlayer currentBidTeam currentCategory currentBidHistory.team');
-  res.json(state);
+  const { getOnlineTeams } = require('../services/auctionPresenceService');
+  const onlineTeamIds = getOnlineTeams(req.user.id);
+  await state.populate('currentPlayer currentBidTeam currentCategory currentBidHistory.team playerQueue');
+  const stateObj = state.toObject();
+  stateObj.onlineTeamIds = onlineTeamIds;
+  res.json(stateObj);
 }
 
 // GET /api/auction/category-players/:categoryId
@@ -63,9 +65,9 @@ async function selectCategory(req, res) {
   state.playerQueue = players.map(p => p._id);
   await state.save();
 
-  const populated = await state.populate('currentCategory');
+  const populated = await state.populate('currentCategory playerQueue');
   emitAuctionUpdate(req, { event: 'CATEGORY_SELECTED', state: populated });
-  res.json({ state: populated, players });
+  res.json({ state: populated, players: populated.playerQueue || players });
 }
 
 // POST /api/auction/shuffle-queue
@@ -79,11 +81,9 @@ async function shuffleQueue(req, res) {
   state.playerQueue = shuffleArray(state.playerQueue);
   await state.save();
 
-  const players = await Player.find({ _id: { $in: state.playerQueue } });
-  const orderedPlayers = state.playerQueue.map(id => players.find(p => p._id.equals(id))).filter(Boolean);
-
-  emitAuctionUpdate(req, { event: 'QUEUE_SHUFFLED' });
-  res.json({ message: 'Player order shuffled.', players: orderedPlayers });
+  const populated = await state.populate('currentCategory playerQueue');
+  emitAuctionUpdate(req, { event: 'QUEUE_SHUFFLED', state: populated });
+  res.json({ message: 'Player order shuffled.', state: populated, players: populated.playerQueue });
 }
 
 // POST /api/auction/next-player  { playerId? }
@@ -97,7 +97,10 @@ async function nextPlayer(req, res) {
   if (req.body.playerId) {
     player = await Player.findOne({ _id: req.body.playerId, organizer: organizerId, isApproved: true });
     // If this player was in the queue, remove it so it isn't offered again
-    state.playerQueue = state.playerQueue.filter(id => !id.equals(player?._id));
+    state.playerQueue = state.playerQueue.filter(id => {
+      const idStr = (id?._id || id)?.toString();
+      return idStr !== player?._id?.toString();
+    });
   } else {
     if (!state.currentCategory) {
       return res.status(400).json({ message: 'Select a category first before starting the auction.' });
@@ -105,7 +108,8 @@ async function nextPlayer(req, res) {
     if (!state.playerQueue || state.playerQueue.length === 0) {
       return res.status(400).json({ message: 'No more players left in this category\'s queue. Pick another category.' });
     }
-    const nextId = state.playerQueue[0];
+    const nextItem = state.playerQueue[0];
+    const nextId = nextItem?._id || nextItem;
     state.playerQueue = state.playerQueue.slice(1);
     player = await Player.findOne({ _id: nextId, organizer: organizerId, isApproved: true, auctionStatus: 'PENDING' });
   }
@@ -140,7 +144,7 @@ async function nextPlayer(req, res) {
 
   await state.save();
 
-  const populated = await state.populate('currentPlayer currentCategory');
+  const populated = await state.populate('currentPlayer currentCategory playerQueue');
   emitAuctionUpdate(req, { event: 'NEXT_PLAYER', state: populated });
   res.json(populated);
 }
@@ -148,7 +152,7 @@ async function nextPlayer(req, res) {
 // POST /api/auction/bid  { teamId }  -- places next-increment bid for a team on current player
 async function placeBid(req, res) {
   try {
-    const populated = await auctionService.placeBid(req.user.id, req.body.teamId);
+    const populated = await auctionService.placeBid(req.user.id, req.body.teamId, { isOrganizer: true });
     emitAuctionUpdate(req, { event: 'BID_PLACED', state: populated });
     res.json(populated);
   } catch (err) {
@@ -214,10 +218,9 @@ async function reAuctionUnsold(req, res) {
     }).sort({ createdAt: 1 });
     state.playerQueue = shuffleArray(players.map(p => p._id));
   }
-  await state.save();
-
-  emitAuctionUpdate(req, { event: 'RE_AUCTION_STARTED', round: state.currentRound });
-  res.json({ message: 'Unsold players moved back into the pool for a new round', round: state.currentRound });
+  const populated = await state.populate('currentCategory playerQueue');
+  emitAuctionUpdate(req, { event: 'RE_AUCTION_STARTED', round: state.currentRound, state: populated });
+  res.json({ message: 'Unsold players moved back into the pool for a new round', round: state.currentRound, state: populated });
 }
 
 // GET /api/auction/history

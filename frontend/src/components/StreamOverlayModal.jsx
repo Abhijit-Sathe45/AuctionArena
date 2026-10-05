@@ -6,7 +6,7 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
 
   const [mode, setMode] = useState("lowerthird"); // 'lowerthird' | 'sidebar' | 'topbar'
   const [bg, setBg] = useState("transparent"); // 'transparent' | 'green' | 'blue' | 'dark'
-  const [theme, setTheme] = useState("mint"); // 'mint' | 'orchid' | 'rose' | 'sky'
+  const [theme, setTheme] = useState("gold"); // 'gold' | 'turf' | 'navy' | 'cherry'
   const [sound, setSound] = useState(false);
   const [ticker, setTicker] = useState(true);
 
@@ -17,7 +17,7 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
   const params = new URLSearchParams();
   if (mode !== "lowerthird") params.set("mode", mode);
   if (bg !== "transparent") params.set("bg", bg);
-  if (theme !== "mint") params.set("theme", theme);
+  if (theme !== "gold") params.set("theme", theme);
   if (sound) params.set("sound", "1");
   if (!ticker) params.set("ticker", "0");
 
@@ -32,50 +32,66 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white border border-mauve/30 rounded-3xl w-full max-w-2xl text-turf shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white border border-slate-300 rounded-3xl w-full max-w-2xl text-turf shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-mauve/20 flex items-center justify-between bg-white">
+        <div className="p-5 sm:p-6 border-b border-slate-200 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-mint to-mint-dark flex items-center justify-center text-turf-dark font-black text-xl shadow-sm">
+            <div className="w-10 h-10 rounded-2xl bg-[#0B1E3D] text-amber-400 flex items-center justify-center font-black text-xl shadow-sm border border-amber-500/30">
               🎥
             </div>
             <div>
-              <h2 className="font-display text-2xl text-turf tracking-wide leading-tight font-bold">
+              <h2 className="font-display text-2xl text-slate-900 tracking-wide leading-tight font-bold">
                 OBS & Live Stream Overlay Studio
               </h2>
-              <p className="text-xs text-mint-dark font-bold">
+              <p className="text-xs text-emerald-700 font-bold">
                 Broadcast TV graphics for YouTube Live, Facebook Live, & vMix
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-mauve hover:text-turf p-2 rounded-xl hover:bg-sky/20 transition text-lg leading-none font-bold"
+            className="text-slate-400 hover:text-slate-700 p-2 rounded-xl hover:bg-slate-200 transition text-lg leading-none font-bold"
           >
             ✕
           </button>
         </div>
 
         {/* Modal Body (Scrollable) */}
-        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 scroll-touch bg-[#F7FAFE]">
+        <div className="p-5 sm:p-6 overflow-y-auto space-y-5 scroll-touch bg-slate-50">
           {/* 1. Layout Mode Selector */}
           <div>
-            <label className="block text-xs font-bold text-turf uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               1. Choose Broadcast Layout
             </label>
-            <div className="grid grid-cols-3 gap-2.5">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <button
                 type="button"
                 onClick={() => setMode("lowerthird")}
                 className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between shadow-sm ${
                   mode === "lowerthird"
-                    ? "bg-mint/20 border-2 border-mint text-mint-dark font-bold ring-1 ring-mint/40"
-                    : "bg-white border-mauve/25 text-turf hover:border-sky-dark"
+                    ? "bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-bold ring-1 ring-emerald-500/30"
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
                 }`}
               >
-                <div className="font-display text-lg tracking-wide">Lower Third</div>
-                <div className="text-[11px] text-mauve-dark mt-1 font-medium">TV-style bottom bar (Streamer Favorite)</div>
+                <div className="font-display text-base sm:text-lg tracking-wide">Lower Third</div>
+                <div className="text-[11px] text-slate-500 mt-1 font-medium">TV bottom bar with player photo</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMode("card")}
+                className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between shadow-sm ${
+                  mode === "card"
+                    ? "bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-bold ring-1 ring-emerald-500/30"
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
+                }`}
+              >
+                <div className="font-display text-base sm:text-lg tracking-wide text-emerald-900 flex items-center gap-1">
+                  <span>Player Card</span>
+                  <span className="text-[9px] bg-amber-400 text-slate-950 px-1 rounded font-black">PRO</span>
+                </div>
+                <div className="text-[11px] text-slate-500 mt-1 font-medium">Big player image & stats (YouTube / FB)</div>
               </button>
 
               <button
@@ -83,12 +99,12 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
                 onClick={() => setMode("sidebar")}
                 className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between shadow-sm ${
                   mode === "sidebar"
-                    ? "bg-mint/20 border-2 border-mint text-mint-dark font-bold ring-1 ring-mint/40"
-                    : "bg-white border-mauve/25 text-turf hover:border-sky-dark"
+                    ? "bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-bold ring-1 ring-emerald-500/30"
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
                 }`}
               >
-                <div className="font-display text-lg tracking-wide">Side Scorecard</div>
-                <div className="text-[11px] text-mauve-dark mt-1 font-medium">Docked right panel for camera view</div>
+                <div className="font-display text-base sm:text-lg tracking-wide">Side Scorecard</div>
+                <div className="text-[11px] text-slate-500 mt-1 font-medium">Docked right panel for camera view</div>
               </button>
 
               <button
@@ -96,19 +112,19 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
                 onClick={() => setMode("topbar")}
                 className={`p-3 rounded-2xl border text-left transition flex flex-col justify-between shadow-sm ${
                   mode === "topbar"
-                    ? "bg-mint/20 border-2 border-mint text-mint-dark font-bold ring-1 ring-mint/40"
-                    : "bg-white border-mauve/25 text-turf hover:border-sky-dark"
+                    ? "bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-bold ring-1 ring-emerald-500/30"
+                    : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
                 }`}
               >
-                <div className="font-display text-lg tracking-wide">Top Bar Strip</div>
-                <div className="text-[11px] text-mauve-dark mt-1 font-medium">Compact header for wide video feeds</div>
+                <div className="font-display text-base sm:text-lg tracking-wide">Top Bar Strip</div>
+                <div className="text-[11px] text-slate-500 mt-1 font-medium">Compact header for wide video feeds</div>
               </button>
             </div>
           </div>
 
           {/* 2. Background Chroma Key / Transparency */}
           <div>
-            <label className="block text-xs font-bold text-turf uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
               2. Background Chroma / Transparency
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -124,14 +140,14 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
                   onClick={() => setBg(opt.id)}
                   className={`p-2.5 rounded-2xl border text-left transition shadow-sm ${
                     bg === opt.id
-                      ? "bg-mint/20 border-2 border-mint text-mint-dark font-bold ring-1 ring-mint/40"
-                      : "bg-white border-mauve/25 text-turf hover:border-sky-dark"
+                      ? "bg-emerald-50 border-2 border-emerald-600 text-emerald-900 font-bold ring-1 ring-emerald-500/30"
+                      : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
                   }`}
                 >
                   <div className="text-xs font-bold flex items-center gap-1.5">
                     <span>{opt.icon}</span> {opt.label}
                   </div>
-                  <div className="text-[10px] text-mauve-dark mt-0.5 font-medium">{opt.desc}</div>
+                  <div className="text-[10px] text-slate-500 mt-0.5 font-medium">{opt.desc}</div>
                 </button>
               ))}
             </div>
@@ -140,15 +156,15 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
           {/* 3. Color Theme & Feature Toggles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-turf uppercase tracking-wider mb-2">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
                 3. Color Theme Palette
               </label>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { id: "mint", label: "Mint Neon", color: "bg-mint" },
-                  { id: "orchid", label: "Orchid Pink", color: "bg-orchid" },
-                  { id: "rose", label: "Rose Coral", color: "bg-rose" },
-                  { id: "sky", label: "Sky Periwinkle", color: "bg-sky" },
+                  { id: "gold", label: "IPL Gold", color: "bg-amber-500" },
+                  { id: "turf", label: "Pitch Turf", color: "bg-emerald-600" },
+                  { id: "navy", label: "Stadium Navy", color: "bg-blue-600" },
+                  { id: "cherry", label: "Cricket Cherry", color: "bg-red-600" },
                 ].map((th) => (
                   <button
                     key={th.id}
@@ -156,8 +172,8 @@ export default function StreamOverlayModal({ isOpen, onClose, slug, tournamentNa
                     onClick={() => setTheme(th.id)}
                     className={`p-2 rounded-xl border text-left flex items-center gap-2 transition shadow-sm ${
                       theme === th.id
-                        ? "bg-mint/20 border-2 border-mint text-turf font-bold"
-                        : "bg-white border-mauve/25 text-turf hover:border-sky-dark"
+                        ? "bg-emerald-50 border-2 border-emerald-600 text-slate-900 font-bold"
+                        : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
                     }`}
                   >
                     <span className={`w-3.5 h-3.5 rounded-full ${th.color} shadow-sm`}></span>

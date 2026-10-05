@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import api from "../../api/axios";
 import { getSocket } from "../../socket";
 import PlayerPhoto from "../../components/PlayerPhoto";
+import TeamLogo from "../../components/TeamLogo";
+import PlayerAuctionPlaque from "../../components/PlayerAuctionPlaque";
 import FloatingVideoPanel from "../../components/FloatingVideoPanel";
 import AuctionStampOverlay from "../../components/AuctionStampOverlay";
 import VoiceSettingsModal from "../../components/VoiceSettingsModal";
@@ -304,7 +306,7 @@ export default function WatchLive() {
   const isCountdownActive = state?.countdownEnabled && timeLeft !== null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#F0F5FF] via-[#FAF5FC] to-[#F2FCF8] text-turf p-3 sm:p-6 max-w-6xl mx-auto">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-900 p-3 sm:p-6 max-w-6xl mx-auto">
       {/* 3D Stamp animation overlay */}
       {stampData && (
         <AuctionStampOverlay
@@ -324,39 +326,39 @@ export default function WatchLive() {
       />
 
       {/* Header bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3 pb-4 border-b border-mauve/20">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3 pb-4 border-b border-slate-200">
         <div className="flex items-center gap-3">
           {logoUrl ? (
             <img
               src={logoUrl}
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shrink-0 border border-sky-dark/40 shadow-sm"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover shrink-0 border border-slate-300 shadow-xs"
               alt=""
             />
           ) : (
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-mint/20 text-mint-dark flex items-center justify-center text-lg shrink-0 shadow-inner">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-[#0B1E3D] text-amber-300 flex items-center justify-center text-xl shrink-0 shadow-xs border border-slate-700">
               🏏
             </div>
           )}
           <div className="min-w-0">
-            <p className="font-display text-2xl sm:text-3xl tracking-wide truncate text-turf font-bold">
+            <p className="font-display text-2xl sm:text-3xl tracking-tight truncate text-slate-900 font-black">
               {tournamentName}
             </p>
-            <p className="text-mauve-dark text-xs sm:text-sm flex items-center gap-2 font-semibold">
-              <span className="w-2 h-2 rounded-full bg-rose animate-pulse inline-block shrink-0" />{" "}
-              LIVE AUCTION
-              {currentCategory && <span className="truncate text-orchid-dark"> · {currentCategory.name}</span>}
+            <p className="text-slate-500 text-xs sm:text-sm flex items-center gap-2 font-bold">
+              <span className="w-2 h-2 rounded-full bg-red-600 animate-pulse inline-block shrink-0" />{" "}
+              LIVE CRICKET AUCTION
+              {currentCategory && <span className="truncate text-emerald-800"> · {currentCategory.name}</span>}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           {/* AI Voice Toggle & Voice Selector Button */}
-          <div className="flex items-center rounded-xl overflow-hidden shadow-sm border border-mauve/30 bg-white">
+          <div className="flex items-center rounded-xl overflow-hidden shadow-2xs border border-slate-300 bg-white">
             <button
               onClick={toggleCommentary}
               className={`font-bold text-xs sm:text-sm px-3.5 py-2 transition-all duration-150 active:scale-95 flex items-center gap-1.5 ${
                 commentaryEnabled
-                  ? "bg-mint text-turf-dark"
-                  : "bg-white hover:bg-sky/20 text-turf"
+                  ? "bg-[#0F5132] text-white"
+                  : "bg-white hover:bg-slate-100 text-slate-800"
               }`}
             >
               <span>🎙️</span>
@@ -367,11 +369,11 @@ export default function WatchLive() {
                 unlockAudio();
                 setShowVoiceSettingsModal(true);
               }}
-              title="Change Voice Tone & Accent (5 Options)"
-              className={`font-semibold text-xs sm:text-sm px-2.5 py-2 border-l border-mauve/30 transition-all duration-150 active:scale-95 flex items-center gap-1 ${
+              title="Change Voice Tone & Accent"
+              className={`font-semibold text-xs sm:text-sm px-2.5 py-2 border-l border-slate-300 transition-all duration-150 active:scale-95 flex items-center gap-1 ${
                 commentaryEnabled
-                  ? "bg-mint hover:bg-mint-dark text-turf-dark"
-                  : "bg-white hover:bg-sky/20 text-turf"
+                  ? "bg-[#0A3E26] text-white hover:bg-[#072F1C]"
+                  : "bg-white hover:bg-slate-100 text-slate-800"
               }`}
             >
               <span>⚙️</span>
@@ -382,19 +384,19 @@ export default function WatchLive() {
           {!soundEnabled && (
             <button
               onClick={enableSound}
-              className="btn-primary text-xs sm:text-sm px-3.5 py-2 shadow-sm font-bold"
+              className="btn-primary text-xs sm:text-sm px-3.5 py-2 shadow-xs font-bold"
             >
               🔊 Enable Sound
             </button>
           )}
           {soundEnabled && (
-            <span className="text-xs text-mint-dark bg-mint/15 border border-mint/40 px-3 py-2 rounded-xl font-bold">🔊 Sound on</span>
+            <span className="text-xs text-emerald-800 bg-emerald-100 border border-emerald-300 px-3 py-2 rounded-xl font-bold">🔊 Sound on</span>
           )}
           <button
             onClick={() => setShowVideo((v) => !v)}
-            className="btn-secondary text-xs sm:text-sm px-3.5 py-2"
+            className="btn-secondary text-xs sm:text-sm px-3.5 py-2 font-bold"
           >
-            {showVideo ? "Hide Video" : "📹 Watch Live Video"}
+            {showVideo ? "Hide Video" : "📹 Live Video Feed"}
           </button>
         </div>
       </div>
@@ -408,91 +410,97 @@ export default function WatchLive() {
       )}
 
       {!currentPlayer ? (
-        <div className="text-center py-16 sm:py-24 bg-white/90 rounded-3xl border border-mauve/25 mb-8 p-4 shadow-sm">
-          <p className="text-xl sm:text-2xl font-display text-turf font-bold">
-            Waiting for the next player…
+        <div className="text-center py-16 sm:py-24 bg-white rounded-3xl border border-slate-200 mb-8 p-4 shadow-xs">
+          <span className="text-4xl block mb-2">🏏</span>
+          <p className="text-xl sm:text-2xl font-display text-slate-900 font-bold">
+            Waiting for the next cricketer…
           </p>
-          <p className="text-mauve-dark text-xs sm:text-sm mt-2 max-w-sm mx-auto font-medium">
-            The auction will appear here as soon as the organizer starts it.
+          <p className="text-slate-500 text-xs sm:text-sm mt-2 max-w-sm mx-auto font-medium">
+            The live auction will appear here as soon as the auctioneer brings the next player to the hammer.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-8">
           {/* Player Card & Current Bid & Countdown */}
-          <div className="lg:col-span-1 bg-white/95 rounded-3xl p-4 sm:p-6 text-center border border-mauve/25 flex flex-col justify-between shadow-md">
+          <div className="lg:col-span-1 bg-white rounded-3xl p-4 sm:p-6 text-center border border-slate-200 flex flex-col justify-between shadow-xs">
             <div>
-              <PlayerPhoto
-                src={currentPlayer.photoUrl}
-                sizeClass="w-32 h-32 sm:w-44 sm:h-44"
+              <div className="relative inline-block mx-auto mb-1">
+                <PlayerPhoto
+                  src={currentPlayer.photoUrl}
+                  sizeClass="w-32 h-32 sm:w-44 sm:h-44"
+                />
+                <span className="absolute bottom-0 right-0 bg-[#0B1E3D] text-amber-300 text-[10px] font-black px-2.5 py-0.5 rounded-full border border-amber-400/40 shadow-sm">
+                  🏏 {currentPlayer.playerType || "Cricketer"}
+                </span>
+              </div>
+              <PlayerAuctionPlaque
+                name={currentPlayer.name}
+                lotNumber={currentPlayer.lotNumber || currentPlayer.jerseyNumber || "01"}
+                role={currentPlayer.playerType}
+                league="IPL"
+                variant="hero"
               />
-              <h2 className="font-display text-2xl sm:text-3xl mt-2 text-turf font-bold">{currentPlayer.name}</h2>
-              <p className="text-mauve-dark text-xs sm:text-sm font-medium">
-                {currentPlayer.playerType} · Age {currentPlayer.age}
-              </p>
-              <p className="text-mauve-dark text-xs sm:text-sm mb-4 font-medium">
-                Bat: {currentPlayer.battingStyle?.replace("_", " ")} · Bowl:{" "}
-                {currentPlayer.bowlingStyle?.replace("_", " ")}
-              </p>
+              <div className="flex flex-wrap items-center justify-center gap-1.5 my-2">
+                <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 text-xs font-semibold">
+                  Age: {currentPlayer.age || "—"}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
+                  🏏 {currentPlayer.battingStyle?.replace("_", " ") || "Right Hand Bat"}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 border border-blue-200 text-xs font-semibold">
+                  ⚡ {currentPlayer.bowlingStyle?.replace("_", " ") || "Right Arm Fast"}
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 mt-4">
               {/* Synchronized Countdown Timer */}
               {isCountdownActive && (
                 <div
                   className={`rounded-2xl p-3 border transition-all duration-300 ${
                     timeLeft <= 5
-                      ? "bg-rose/15 border-rose/50 shadow-[0_0_15px_rgba(222,108,131,0.25)] animate-timer-heartbeat"
+                      ? "bg-red-50 border-red-300 text-red-700 animate-timer-heartbeat"
                       : timeLeft <= 15
-                      ? "bg-orchid/20 border-orchid/40"
-                      : "bg-mint/15 border-mint/40 shadow-sm"
+                      ? "bg-amber-50 border-amber-300 text-amber-800"
+                      : "bg-emerald-50 border-emerald-300 text-emerald-800"
                   }`}
                 >
-                  <p className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-mauve-dark flex items-center justify-center gap-1.5">
+                  <p className="text-[11px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
                     <span>⏱️</span>
-                    <span>{timeLeft <= 5 ? "Closing Soon!" : "Time Remaining"}</span>
+                    <span>{timeLeft <= 5 ? "HAMMER CLOSING SOON!" : "Auction Clock"}</span>
                   </p>
-                  <p
-                    className={`font-display text-3xl sm:text-4xl font-bold tracking-widest mt-0.5 ${
-                      timeLeft <= 5
-                        ? "text-rose"
-                        : timeLeft <= 15
-                        ? "text-orchid-dark"
-                        : "text-mint-dark"
-                    }`}
-                  >
+                  <p className="font-scoreboard text-3xl sm:text-4xl font-black tracking-wider mt-0.5">
                     {formatTime(timeLeft)}
                   </p>
                   {timeLeft === 0 && (
-                    <p className="text-[10px] text-rose font-bold animate-pulse mt-0.5">
-                      Bidding expired · Finalizing result…
+                    <p className="text-[10px] text-red-600 font-bold animate-pulse mt-0.5">
+                      Bidding expired · Under the hammer…
                     </p>
                   )}
                 </div>
               )}
 
               {/* Current Bid Display */}
-              <div className="bg-mint/15 rounded-2xl p-4 sm:p-5 border border-mint/40 shadow-inner">
-                <p className="text-[11px] sm:text-xs text-mauve-dark uppercase tracking-wider font-bold">
+              <div className="bg-[#0B1E3D] text-white rounded-2xl p-4 sm:p-5 border border-slate-700 shadow-xs">
+                <p className="text-[11px] text-amber-300 uppercase tracking-wider font-bold">
                   Current Bid
                 </p>
-                <p className="font-display text-3xl sm:text-5xl text-mint-dark mt-1 font-black">
-                  Rs. {state.currentBidAmount?.toLocaleString("en-IN")}
+                <p className="font-scoreboard text-3xl sm:text-5xl text-white mt-1 font-black">
+                  ₹{state.currentBidAmount?.toLocaleString("en-IN")}
                 </p>
                 {state.currentBidTeam ? (
-                  <div className="text-xs sm:text-sm mt-2 flex items-center justify-center gap-2">
-                    {state.currentBidTeam.teamLogoUrl && (
-                      <img
-                        src={state.currentBidTeam.teamLogoUrl}
-                        className="w-5 h-5 rounded-full object-cover shrink-0 border border-mint/40 shadow-sm"
-                        alt=""
-                      />
-                    )}
-                    <span className="truncate max-w-[200px] font-bold text-turf">
-                      {state.currentBidTeam.teamName}
+                  <div className="mt-2 pt-2 border-t border-slate-700/80 flex items-center justify-center gap-2">
+                    <TeamLogo
+                      src={state.currentBidTeam.teamLogoUrl}
+                      teamName={state.currentBidTeam.teamName}
+                      className="w-6 h-6"
+                    />
+                    <span className="truncate max-w-[200px] font-bold text-amber-300 text-xs sm:text-sm">
+                      🏆 {state.currentBidTeam.teamName}
                     </span>
                   </div>
                 ) : (
-                  <p className="text-xs text-mauve-dark mt-1.5 italic font-medium">
+                  <p className="text-xs text-slate-400 mt-1.5 italic font-medium">
                     Base price · No bids yet
                   </p>
                 )}
@@ -506,29 +514,29 @@ export default function WatchLive() {
             <div className="flex items-center gap-2 mb-2">
               <button
                 onClick={() => setActiveTab("commentary")}
-                className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
                   activeTab === "commentary"
-                    ? "bg-mint text-turf-dark shadow-md font-extrabold"
-                    : "bg-white text-turf border border-mauve/25 hover:bg-sky/20"
+                    ? "bg-[#0F5132] text-white shadow-xs"
+                    : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
                 }`}
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-rose"></span>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                 </span>
-                <span>📜 Live Text Commentary</span>
+                <span>📜 Cricket Match Commentary</span>
               </button>
 
               <button
                 onClick={() => setActiveTab("bidHistory")}
-                className={`px-4 py-2 rounded-2xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 ${
                   activeTab === "bidHistory"
-                    ? "bg-mint text-turf-dark shadow-md font-extrabold"
-                    : "bg-white text-turf border border-mauve/25 hover:bg-sky/20"
+                    ? "bg-[#0F5132] text-white shadow-xs"
+                    : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-100"
                 }`}
               >
-                <span>⚡ Bid History</span>
-                <span className="text-[10px] bg-sky/20 text-turf px-2 py-0.5 rounded-full font-mono font-bold">
+                <span>⚡ Bid Stream</span>
+                <span className="text-[10px] bg-black/10 px-2 py-0.5 rounded-full font-mono font-bold">
                   {state.currentBidHistory?.length || 0}
                 </span>
               </button>
@@ -544,10 +552,10 @@ export default function WatchLive() {
                 />
               </div>
             ) : (
-              <div className="bg-white/95 rounded-3xl p-4 sm:p-6 border border-mauve/25 flex-1 flex flex-col shadow-md">
-                <h3 className="font-bold text-sm sm:text-base mb-3 text-turf flex items-center justify-between">
-                  <span>Current Player Bid Stream</span>
-                  <span className="text-xs text-mint-dark font-mono font-bold">
+              <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200 flex-1 flex flex-col shadow-xs">
+                <h3 className="font-bold text-sm sm:text-base mb-3 text-slate-900 flex items-center justify-between">
+                  <span>Current Cricketer Bid Log</span>
+                  <span className="text-xs text-amber-700 font-mono font-bold">
                     Total: {state.currentBidHistory?.length || 0} Bids
                   </span>
                 </h3>
@@ -556,37 +564,35 @@ export default function WatchLive() {
                     {[...state.currentBidHistory].reverse().map((b, i) => (
                       <li
                         key={i}
-                        className={`flex justify-between items-center text-xs sm:text-sm px-4 py-2.5 rounded-2xl transition-all ${
+                        className={`flex justify-between items-center text-xs sm:text-sm px-4 py-2.5 rounded-xl transition-all ${
                           i === 0
-                            ? "bg-mint/20 font-bold border-2 border-mint text-mint-dark shadow-sm scale-[1.01]"
-                            : "bg-sky/10 border border-sky/20 text-turf"
+                            ? "bg-amber-50 font-bold border border-amber-300 text-amber-950 shadow-2xs"
+                            : "bg-slate-50 border border-slate-200 text-slate-800"
                         }`}
                       >
                         <div className="flex items-center gap-2.5 truncate max-w-[70%]">
-                          <span className="text-xs font-mono text-mauve-dark w-5 font-bold">
+                          <span className="text-xs font-mono text-slate-500 w-5 font-bold">
                             #{state.currentBidHistory.length - i}
                           </span>
-                          {b.team?.teamLogoUrl && (
-                            <img
-                              src={b.team.teamLogoUrl}
-                              alt=""
-                              className="w-5 h-5 rounded-full object-cover shrink-0 border border-mint/40"
-                            />
-                          )}
-                          <span className="truncate font-bold text-turf">
-                            {b.team?.teamName || "Unknown Team"}
+                          <TeamLogo
+                            src={b.team?.teamLogoUrl}
+                            teamName={b.team?.teamName}
+                            className="w-5 h-5 rounded-full"
+                          />
+                          <span className="truncate font-bold text-slate-900">
+                            {b.team?.teamName || "Unknown Franchise"}
                           </span>
                         </div>
-                        <span className="shrink-0 font-display text-base text-mint-dark font-black">
-                          Rs. {b.amount?.toLocaleString("en-IN")}
+                        <span className="shrink-0 font-scoreboard text-base text-[#0F5132] font-black">
+                          ₹{b.amount?.toLocaleString("en-IN")}
                         </span>
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <div className="flex-1 flex flex-col items-center justify-center text-center py-12 text-mauve-dark">
-                    <p className="text-2xl mb-1">🏏</p>
-                    <p className="text-sm font-semibold">No bids placed yet for this player.</p>
+                  <div className="flex-1 flex flex-col items-center justify-center text-center py-12 text-slate-400">
+                    <p className="text-3xl mb-1">🏏</p>
+                    <p className="text-sm font-semibold">No bids placed yet for this cricketer.</p>
                   </div>
                 )}
               </div>
@@ -595,8 +601,10 @@ export default function WatchLive() {
         </div>
       )}
 
-      {/* Team Purses Grid */}
-      <h3 className="font-display text-xl sm:text-2xl mb-3 text-turf font-bold">Team Purses</h3>
+      {/* Franchise Purses Grid */}
+      <h3 className="font-display text-xl sm:text-2xl mb-3 text-slate-900 font-bold flex items-center gap-2">
+        <span>💰</span> Franchise Team Purses
+      </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {teams.map((t) => {
           const pct = Math.max(
@@ -606,34 +614,28 @@ export default function WatchLive() {
           return (
             <div
               key={t._id}
-              className="bg-white/95 rounded-2xl p-3.5 sm:p-4 border border-mauve/25 hover:border-mint/50 shadow-sm transition"
+              className="bg-white rounded-2xl p-3.5 sm:p-4 border border-slate-200 hover:border-slate-300 shadow-xs transition"
             >
               <div className="flex items-center gap-2 mb-2 min-w-0">
-                {t.teamLogoUrl ? (
-                  <img
-                    src={t.teamLogoUrl}
-                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0 border border-mauve/30 shadow-sm"
-                    alt=""
-                  />
-                ) : (
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-sky/20 text-turf flex items-center justify-center text-xs shrink-0 font-bold">
-                    🏏
-                  </div>
-                )}
-                <p className="font-bold text-xs sm:text-sm truncate text-turf">{t.teamName}</p>
+                <TeamLogo
+                  src={t.teamLogoUrl}
+                  teamName={t.teamName}
+                  className="w-8 h-8 rounded-full"
+                />
+                <p className="font-bold text-xs sm:text-sm truncate text-slate-900">{t.teamName}</p>
               </div>
-              <div className="w-full h-2 bg-mauve/20 rounded-full overflow-hidden mb-1">
-                <div className="h-full bg-gradient-to-r from-mint to-mint-dark transition-all duration-300 rounded-full" style={{ width: `${pct}%` }} />
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden mb-1.5 border border-slate-200">
+                <div className="h-full bg-[#0F5132] transition-all duration-300 rounded-full" style={{ width: `${pct}%` }} />
               </div>
-              <p className="text-xs text-mauve-dark truncate font-medium">
-                Rs. {t.purseRemaining.toLocaleString("en-IN")} left
+              <p className="text-xs text-slate-600 truncate font-semibold font-mono">
+                ₹{t.purseRemaining.toLocaleString("en-IN")} left
               </p>
             </div>
           );
         })}
         {teams.length === 0 && (
-          <p className="text-mauve-dark text-sm col-span-full">
-            No approved teams yet.
+          <p className="text-slate-400 text-sm col-span-full">
+            No approved franchise teams yet.
           </p>
         )}
       </div>
@@ -646,21 +648,23 @@ export default function WatchLive() {
       {/* Recently Sold Ticker */}
       {recentSales?.length > 0 && (
         <div>
-          <h3 className="font-display text-xl sm:text-2xl mb-3 text-turf font-bold">Recently Sold</h3>
+          <h3 className="font-display text-xl sm:text-2xl mb-3 text-slate-900 font-bold flex items-center gap-2">
+            <span>🏆</span> Recently Sold Cricketers
+          </h3>
           <div className="flex gap-2.5 overflow-x-auto pb-2 scroll-touch">
             {recentSales.map((log) => (
               <div
                 key={log._id}
-                className="bg-white/95 rounded-2xl p-3 border border-mauve/25 min-w-[160px] sm:min-w-[180px] shrink-0 hover:border-mint/50 shadow-sm transition"
+                className="bg-white rounded-2xl p-3 border border-slate-200 min-w-[160px] sm:min-w-[180px] shrink-0 hover:border-emerald-600/40 shadow-xs transition"
               >
-                <p className="font-bold text-xs sm:text-sm truncate text-turf">
-                  {log.player?.name}
+                <p className="font-bold text-xs sm:text-sm truncate text-slate-900">
+                  🏏 {log.player?.name}
                 </p>
-                <p className="text-xs text-mauve-dark truncate font-medium">
+                <p className="text-xs text-slate-500 truncate font-medium">
                   {log.finalTeam?.teamName}
                 </p>
-                <p className="text-xs text-mint-dark font-black mt-1 font-mono">
-                  Rs. {log.finalPrice?.toLocaleString("en-IN")}
+                <p className="text-xs text-[#0F5132] font-black mt-1 font-mono">
+                  ₹{log.finalPrice?.toLocaleString("en-IN")}
                 </p>
               </div>
             ))}

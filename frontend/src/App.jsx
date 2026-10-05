@@ -29,6 +29,7 @@ const Teams = lazy(() => import("./pages/organizer/Teams"));
 const Categories = lazy(() => import("./pages/organizer/Categories"));
 const Settings = lazy(() => import("./pages/organizer/Settings"));
 const LiveAuction = lazy(() => import("./pages/organizer/LiveAuction"));
+const AuctionAnalyst = lazy(() => import("./pages/organizer/AuctionAnalyst"));
 const History = lazy(() => import("./pages/organizer/History"));
 const OrganizerHowToUse = lazy(() => import("./pages/organizer/HowToUse"));
 
@@ -36,7 +37,15 @@ const SuperAdminLogin = lazy(() => import("./pages/superadmin/Login"));
 const SuperAdminDashboard = lazy(() => import("./pages/superadmin/Dashboard"));
 
 export default function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+      if (path.startsWith("/overlay") || path.startsWith("/stream-overlay")) {
+        return false;
+      }
+    }
+    return true;
+  });
 
   if (showSplash) {
     return (
@@ -124,6 +133,14 @@ export default function App() {
               element={
                 <ProtectedRoute tokenKey="organizerToken">
                   <LiveAuction />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/analytics"
+              element={
+                <ProtectedRoute tokenKey="organizerToken">
+                  <AuctionAnalyst />
                 </ProtectedRoute>
               }
             />

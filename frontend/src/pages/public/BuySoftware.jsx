@@ -23,6 +23,7 @@ export default function BuySoftware() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState('1_MONTH');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [credentials, setCredentials] = useState(null);
 
@@ -30,6 +31,10 @@ export default function BuySoftware() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (uploadingLogo) {
+      setStatus({ type: 'info', message: 'Please wait, tournament logo is still uploading...' });
+      return;
+    }
     setStatus({ type: '', message: '' });
 
     if (!form.password || form.password.length < 6) {
@@ -212,7 +217,12 @@ export default function BuySoftware() {
           </div>
         </div>
 
-        <ImageUpload label="Tournament Logo" onUploaded={(url) => update('logoUrl', url)} />
+        <ImageUpload
+          label="Tournament Logo"
+          shape="square"
+          onUploaded={(url) => update('logoUrl', url)}
+          onUploadingChange={setUploadingLogo}
+        />
 
         <div>
           <label className="label-text mb-2">Choose Your Pass</label>
@@ -229,8 +239,12 @@ export default function BuySoftware() {
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25">
-          {submitting ? 'Processing…' : 'Proceed to Payment'}
+        <button
+          type="submit"
+          disabled={submitting || uploadingLogo}
+          className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {submitting ? 'Processing…' : uploadingLogo ? 'Uploading Logo…' : 'Proceed to Payment'}
         </button>
       </form>
     </Center>

@@ -3,6 +3,8 @@ import api from "../../api/axios";
 import OrganizerLayout from "../../components/OrganizerLayout";
 import StatusMessage from "../../components/StatusMessage";
 import { SkeletonTable } from "../../components/Skeleton";
+import ImageUpload from "../../components/ImageUpload";
+import { compressImage } from "../../utils/imageCompressor";
 import { useToast } from "../../context/ToastContext";
 import { getSocket } from "../../socket";
 
@@ -12,11 +14,14 @@ export default function Teams() {
   const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [uploadingId, setUploadingId] = useState(null);
+  const [uploadingFormLogo, setUploadingFormLogo] = useState(false);
   const [form, setForm] = useState({
     ownerName: "",
     teamName: "",
     ownerPlaysMatch: false,
     phone: "",
+    teamLogoUrl: null,
   });
   // Local pending edits per team, keyed by team id. Nothing is sent to the server
   // until that row's "Save" button is clicked.
@@ -67,7 +72,7 @@ export default function Teams() {
   }, []);
 
   function getEdit(teamId) {
-    return edits[teamId] || { isApproved: false, biddingPin: "" };
+    return edits[teamId] || { isApproved: false, biddingPin: "", teamLogoUrl: null };
   }
   function setEdit(teamId, patch) {
     setEdits((prev) => ({
@@ -77,7 +82,28 @@ export default function Teams() {
   }
   function isDirty(team) {
     const e = getEdit(team._id);
-    return e.isApproved !== team.isApproved || (e.biddingPin && e.biddingPin !== team.biddingPin);
+    const logoDirty = e.teamLogoUrl !== undefined && e.teamLogoUrl !== (team.teamLogoUrl || null);
+    return e.isApproved !== team.isApproved || (e.biddingPin && e.biddingPin !== team.biddingPin) || logoDirty;
+  }
+
+  async function handleLogoChange(team, file) {
+    if (!file) return;
+    setUploadingId(team._id);
+    try {
+      const optimizedFile = await compressImage(file, 1200, 1200, 0.85);
+      const formData = new FormData();
+      formData.append("file", optimizedFile);
+      const { data } = await api.post("/upload", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
+      });
+      setEdit(team._id, { teamLogoUrl: data.url });
+      showToast("Team logo uploaded — click Save to apply.", "info");
+    } catch (err) {
+      showToast("Logo upload failed. Please try again.", "error");
+    } finally {
+      setUploadingId(null);
+    }
   }
 
   async function saveRow(team) {
@@ -88,6 +114,7 @@ export default function Teams() {
       await api.put(`/organizer-admin/teams/${team._id}`, {
         isApproved: e.isApproved,
         biddingPin: e.biddingPin,
+        teamLogoUrl: e.teamLogoUrl !== undefined ? e.teamLogoUrl : team.teamLogoUrl,
       });
       showToast(`Saved changes for ${team.teamName}.`, "success");
       await load();
@@ -116,6 +143,7 @@ export default function Teams() {
         teamName: "",
         ownerPlaysMatch: false,
         phone: "",
+        teamLogoUrl: null,
       });
       setShowAdd(false);
       showToast(`${form.teamName} added.`, "success");
@@ -215,17 +243,30 @@ export default function Teams() {
             />
             Owner also plays
           </label>
-          <button className="btn-secondary col-span-1 sm:col-span-2 py-2.5">Add Team</button>
+          <div className="col-span-1 sm:col-span-2">
+            <ImageUpload
+              label="Team Logo"
+              shape="square"
+              onUploaded={(url) => setForm((f) => ({ ...f, teamLogoUrl: url }))}
+              onUploadingChange={setUploadingFormLogo}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={uploadingFormLogo}
+            className="btn-secondary col-span-1 sm:col-span-2 py-2.5 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {uploadingFormLogo ? "Uploading Logo…" : "Add Team"}
+          </button>
         </form>
       )}
 
       {dirtyCount > 0 && (
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-mint/15 border border-mint/40 rounded-2xl px-4 py-3 mb-3 shadow-sm">
-          <p className="text-xs sm:text-sm font-bold text-mint-dark">
-            {dirtyCount} team{dirtyCount > 1 ? "s have" : " has"} unsaved
-            changes
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-emerald-50 border border-emerald-300 rounded-2xl px-4 py-3 mb-3 shadow-xs">
+          <p className="text-xs sm:text-sm font-bold text-emerald-900">
+            👥 {dirtyCount} franchise team{dirtyCount > 1 ? "s have" : " has"} unsaved changes
           </p>
-          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-5 w-full sm:w-auto font-bold shadow-md shadow-mint/20">
+          <button onClick={saveAll} className="btn-primary text-xs sm:text-sm py-2 px-5 w-full sm:w-auto font-bold shadow-xs">
             💾 Save All Changes
           </button>
         </div>
@@ -236,64 +277,102 @@ export default function Teams() {
       {loading ? (
         <SkeletonTable rows={5} cols={7} />
       ) : (
-        <div className="card overflow-x-auto mt-3 scroll-touch shadow-sm border-mauve/20">
+        <div className="card overflow-x-auto mt-3 scroll-touch shadow-xs border-slate-200">
           <table className="w-full text-xs sm:text-sm min-w-[620px]">
             <thead>
-              <tr className="text-left text-mauve-dark border-b border-mauve/20">
-                <th className="py-2.5 pr-3">Team</th>
-                <th className="py-2.5 pr-3">Owner</th>
-                <th className="py-2.5 pr-3">Plays?</th>
-                <th className="py-2.5 pr-3">Payment</th>
-                <th className="py-2.5 pr-3">Approved</th>
-                <th className="py-2.5 pr-3">Bidding PIN</th>
-                <th className="py-2.5 pr-3">Purse Remaining</th>
-                <th className="py-2.5 pr-3 text-right">Actions</th>
+              <tr className="text-left text-slate-500 border-b border-slate-200">
+                <th className="py-2.5 pr-3 font-semibold">Franchise</th>
+                <th className="py-2.5 pr-3 font-semibold">Owner</th>
+                <th className="py-2.5 pr-3 font-semibold">Plays?</th>
+                <th className="py-2.5 pr-3 font-semibold">Payment</th>
+                <th className="py-2.5 pr-3 font-semibold">Approved</th>
+                <th className="py-2.5 pr-3 font-semibold">Bidding PIN</th>
+                <th className="py-2.5 pr-3 font-semibold">Purse Remaining</th>
+                <th className="py-2.5 pr-3 text-right font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
               {visibleTeams.map((t) => {
                 const e = getEdit(t._id);
                 const dirty = isDirty(t);
+                const currentLogo = e.teamLogoUrl !== undefined && e.teamLogoUrl !== null ? e.teamLogoUrl : t.teamLogoUrl;
+                const inputId = `team-logo-input-${t._id}`;
                 return (
                   <tr
                     key={t._id}
-                    className={`border-b border-black/5 ${dirty ? "bg-mint/5" : ""}`}
+                    className={`border-b border-slate-100 ${dirty ? "bg-emerald-50/50" : "hover:bg-slate-50/50"}`}
                   >
-                    <td className="py-2 pr-3 font-medium">
+                    <td className="py-2.5 pr-3 font-medium">
                       <div className="flex items-center gap-2">
-                        {t.teamLogoUrl && (
-                          <img
-                            src={t.teamLogoUrl}
-                            className="w-7 h-7 rounded-full object-cover border border-sky/30"
-                            alt=""
+                        <div className="relative group shrink-0">
+                          {currentLogo ? (
+                            <img
+                              src={currentLogo}
+                              className="w-9 h-9 rounded-full object-contain p-0.5 bg-white border border-slate-300 shadow-2xs"
+                              alt=""
+                              onError={(ev) => {
+                                ev.target.style.display = "none";
+                                if (ev.target.nextSibling) ev.target.nextSibling.style.display = "flex";
+                              }}
+                            />
+                          ) : null}
+                          <div
+                            className={`w-9 h-9 rounded-full bg-[#0B1E3D] text-amber-300 items-center justify-center text-xs font-bold shadow-2xs ${
+                              currentLogo ? "hidden" : "flex"
+                            }`}
+                          >
+                            🏏
+                          </div>
+                          <input
+                            id={inputId}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(ev) => handleLogoChange(t, ev.target.files[0])}
                           />
-                        )}
-                        <span className="text-turf font-bold">{t.teamName}</span>
+                          <label
+                            htmlFor={inputId}
+                            title="Click to upload/change team logo"
+                            className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center text-[10px] text-white cursor-pointer transition-opacity"
+                          >
+                            {uploadingId === t._id ? "…" : "📷"}
+                          </label>
+                        </div>
+                        <span className="text-slate-900 font-bold">{t.teamName}</span>
                         {dirty && (
                           <span className="badge-unsaved">● unsaved</span>
                         )}
                       </div>
                     </td>
-                    <td className="py-2 pr-3">{t.ownerName}</td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2.5 pr-3 text-slate-700 font-medium">{t.ownerName}</td>
+                    <td className="py-2.5 pr-3 text-slate-600">
                       {t.ownerPlaysMatch ? "Yes" : "No"}
                     </td>
-                    <td className="py-2 pr-3">{t.paymentStatus}</td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2.5 pr-3">
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${
+                        t.paymentStatus === "PAID"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-600"
+                      }`}>
+                        {t.paymentStatus}
+                      </span>
+                    </td>
+                    <td className="py-2.5 pr-3">
                       <input
                         type="checkbox"
+                        className="w-4 h-4 rounded text-[#0F5132] accent-[#0F5132] cursor-pointer"
                         checked={e.isApproved}
                         onChange={(ev) =>
                           setEdit(t._id, { isApproved: ev.target.checked })
                         }
                       />
                     </td>
-                    <td className="py-2 pr-3">
+                    <td className="py-2.5 pr-3">
                       <div className="flex items-center gap-1.5">
                         <input
                           type="text"
                           maxLength={6}
-                          className="input-field py-0.5 px-2 text-xs font-mono font-bold w-16 text-center text-mint-dark"
+                          className="input-field py-0.5 px-2 text-xs font-mono font-bold w-16 text-center text-[#0F5132]"
                           value={e.biddingPin || ""}
                           onChange={(ev) => setEdit(t._id, { biddingPin: ev.target.value })}
                           title="4-digit secret bidding PIN"
@@ -304,16 +383,16 @@ export default function Teams() {
                             navigator.clipboard.writeText(e.biddingPin || t.biddingPin);
                             showToast(`Copied PIN ${e.biddingPin || t.biddingPin} for ${t.teamName}`, "success");
                           }}
-                          className="text-[11px] p-1 rounded bg-sky/20 hover:bg-sky/30 text-turf"
+                          className="text-[11px] p-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300"
                           title="Copy PIN"
                         >
                           📋
                         </button>
                       </div>
                     </td>
-                    <td className="py-2 pr-3 font-medium">
-                      Rs. {t.purseRemaining?.toLocaleString("en-IN")} /{" "}
-                      {t.totalPurse?.toLocaleString("en-IN")}
+                    <td className="py-2.5 pr-3 font-semibold text-slate-900 font-mono">
+                      ₹{t.purseRemaining?.toLocaleString("en-IN")} /{" "}
+                      <span className="text-slate-500 font-normal">₹{t.totalPurse?.toLocaleString("en-IN")}</span>
                     </td>
                     <td className="py-2.5 pr-3 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-2">
@@ -326,7 +405,7 @@ export default function Teams() {
                         </button>
                         <button
                           onClick={() => deleteTeam(t._id)}
-                          className="text-rose text-xs hover:underline px-1.5 py-1 font-semibold"
+                          className="text-red-600 hover:text-red-800 text-xs hover:underline px-1.5 py-1 font-semibold"
                         >
                           Remove
                         </button>
@@ -338,8 +417,8 @@ export default function Teams() {
             </tbody>
           </table>
           {teams.length === 0 && (
-            <p className="text-black/40 text-sm py-6 text-center">
-              No teams registered yet.
+            <p className="text-slate-400 text-sm py-6 text-center">
+              No franchise teams registered yet.
             </p>
           )}
         </div>

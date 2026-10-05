@@ -12,6 +12,9 @@ export function loadRazorpayScript() {
 }
 
 export async function openRazorpayCheckout({ order, keyId, name, description, prefill }) {
+  if (!keyId) {
+    throw new Error('Razorpay Key ID is not configured (VITE_RAZORPAY_KEY_ID). Please set your Razorpay Key ID in the frontend environment configuration.');
+  }
   const loaded = await loadRazorpayScript();
   if (!loaded) throw new Error('Failed to load Razorpay checkout. Check your internet connection.');
 

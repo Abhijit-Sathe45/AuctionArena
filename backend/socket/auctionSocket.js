@@ -4,6 +4,7 @@ const Organizer = require('../models/Organizer');
 const AuctionSettings = require('../models/AuctionSettings');
 const AuctionState = require('../models/AuctionState');
 const auctionService = require('../services/auctionService');
+const auctionPresenceService = require('../services/auctionPresenceService');
 
 // In-memory organizer pass verification cache (20s TTL) for fast-path socket bidding
 const authCache = new Map();
@@ -56,14 +57,35 @@ function authenticateTeamSocket(token) {
 function registerAuctionSocketHandlers(io, socket) {
   // Everyone (organizer admin panel + public spectators + team remotes) joins a room to receive broadcasts.
   socket.on('join-auction', (organizerId) => {
-    if (organizerId) socket.join(`auction-${organizerId}`);
+    if (organizerId) {
+      socket.join(`auction-${organizerId}`);
+      const onlineTeamIds = auctionPresenceService.getOnlineTeams(organizerId);
+      socket.emit('online-teams-update', { onlineTeamIds });
+    }
+  });
+
+  // Team owner mobile remote registration on connect/login
+  socket.on('auction:join-team-remote', async ({ token } = {}, ack) => {
+    try {
+      const { teamId, organizerId } = authenticateTeamSocket(token);
+      socket.join(`auction-${organizerId}`);
+      const onlineTeamIds = auctionPresenceService.registerTeamOnline(io, organizerId, teamId, socket.id);
+      if (typeof ack === 'function') ack({ ok: true, onlineTeamIds });
+    } catch (err) {
+      if (typeof ack === 'function') ack({ ok: false, message: err.message });
+    }
+  });
+
+  // Team owner mobile remote unregister on logout / leave
+  socket.on('auction:leave-team-remote', () => {
+    auctionPresenceService.unregisterTeamOnline(io, socket.id);
   });
 
   // Fast-path bid (Organizer) — { token, teamId } -> ack(err, state)
   socket.on('auction:bid', async ({ token, teamId } = {}, ack) => {
     try {
       const organizerId = await authenticateOrganizerSocket(token);
-      const state = await auctionService.placeBid(organizerId, teamId);
+      const state = await auctionService.placeBid(organizerId, teamId, { isOrganizer: true });
       io.to(`auction-${organizerId}`).emit('auction-update', { event: 'BID_PLACED', state });
       if (typeof ack === 'function') ack({ ok: true, state });
     } catch (err) {
@@ -93,7 +115,10 @@ function registerAuctionSocketHandlers(io, socket) {
         throw new Error('Team owner remote bidding is disabled by the tournament organizer.');
       }
 
-      const state = await auctionService.placeBid(organizerId, teamId);
+      // Ensure this team is tracked as online
+      auctionPresenceService.registerTeamOnline(io, organizerId, teamId, socket.id);
+
+      const state = await auctionService.placeBid(organizerId, teamId, { isOrganizer: false });
       io.to(`auction-${organizerId}`).emit('auction-update', { event: 'BID_PLACED', state });
       if (typeof ack === 'function') ack({ ok: true, state });
     } catch (err) {
@@ -138,6 +163,11 @@ function registerAuctionSocketHandlers(io, socket) {
       if (typeof ack === 'function') ack({ ok: false, message: err.message });
     }
   });
+
+  // Disconnection cleanup for team remotes
+  socket.on('disconnect', () => {
+    auctionPresenceService.unregisterTeamOnline(io, socket.id);
+  });
 }
 
-module.exports = registerAuctionSocketHandlers;
+module.exports = registerAuctionSocketHandlers;

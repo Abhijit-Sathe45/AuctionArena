@@ -4,8 +4,22 @@ const playerSchema = new mongoose.Schema({
   organizer: { type: mongoose.Schema.Types.ObjectId, ref: 'Organizer', required: true, index: true },
   name: { type: String, required: true, trim: true },
   battingStyle: { type: String, enum: ['RIGHT_HANDED', 'LEFT_HANDED'], required: true },
-  bowlingStyle: { type: String, enum: ['RIGHT_HANDED', 'LEFT_HANDED', 'NA'], default: 'NA' },
-  playerType: { type: String, enum: ['BATSMAN', 'BOWLER', 'ALLROUNDER'], required: true },
+  bowlingStyle: {
+    type: String,
+    enum: [
+      'RIGHT_ARM_FAST',
+      'RIGHT_ARM_MEDIUM',
+      'RIGHT_ARM_SPIN',
+      'LEFT_ARM_FAST',
+      'LEFT_ARM_MEDIUM',
+      'LEFT_ARM_SPIN',
+      'RIGHT_HANDED',
+      'LEFT_HANDED',
+      'NA'
+    ],
+    default: 'NA'
+  },
+  playerType: { type: String, enum: ['BATSMAN', 'BOWLER', 'ALLROUNDER', 'ALL_ROUNDER', 'WICKET_KEEPER'], required: true },
   age: { type: Number, required: true },
   photoUrl: { type: String, default: null },
   phone: { type: String, trim: true },

@@ -14,6 +14,7 @@ export default function PlayerRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [done, setDone] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   const [form, setForm] = useState({
     name: '', battingStyle: 'RIGHT_HANDED', bowlingStyle: 'NA',
@@ -30,6 +31,10 @@ export default function PlayerRegister() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (uploadingPhoto) {
+      setStatus({ type: 'info', message: 'Please wait, your photo is still uploading...' });
+      return;
+    }
     setStatus({ type: '', message: '' });
     setSubmitting(true);
     try {
@@ -104,8 +109,10 @@ export default function PlayerRegister() {
             <select className="input-field" value={form.bowlingStyle} onChange={e => update('bowlingStyle', e.target.value)}>
               <option value="NA">Doesn't Bowl</option>
               <option value="RIGHT_ARM_FAST">Right-arm Fast</option>
+              <option value="RIGHT_ARM_MEDIUM">Right-arm Medium</option>
               <option value="RIGHT_ARM_SPIN">Right-arm Spin</option>
               <option value="LEFT_ARM_FAST">Left-arm Fast</option>
+              <option value="LEFT_ARM_MEDIUM">Left-arm Medium</option>
               <option value="LEFT_ARM_SPIN">Left-arm Spin</option>
             </select>
           </div>
@@ -132,12 +139,26 @@ export default function PlayerRegister() {
           <input required type="tel" className="input-field" value={form.phone} onChange={e => update('phone', e.target.value)} />
         </div>
 
-        <ImageUpload label="Profile Photo (optional)" onUploaded={(url) => update('photoUrl', url)} />
+        <ImageUpload
+          label="Profile Photo (optional)"
+          onUploaded={(url) => update('photoUrl', url)}
+          onUploadingChange={setUploadingPhoto}
+        />
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25">
-          {submitting ? 'Registering…' : info.fees?.playerRegistration ? `Pay ₹${info.fees.playerRegistration} & Register` : 'Complete Registration'}
+        <button
+          type="submit"
+          disabled={submitting || uploadingPhoto}
+          className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {submitting
+            ? 'Registering…'
+            : uploadingPhoto
+            ? 'Uploading Photo…'
+            : info.fees?.playerRegistration
+            ? `Pay ₹${info.fees.playerRegistration} & Register`
+            : 'Complete Registration'}
         </button>
       </form>
     </Center>
@@ -145,5 +166,5 @@ export default function PlayerRegister() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 bg-gradient-to-b from-sky/15 via-ivory to-orchid/10">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 bg-slate-900 text-slate-100 py-8">{children}</div>;
 }

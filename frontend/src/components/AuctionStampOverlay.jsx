@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import PlayerPhoto from "./PlayerPhoto";
+import TeamLogo from "./TeamLogo";
 
 export default function AuctionStampOverlay({
   result, // 'SOLD' | 'UNSOLD'
@@ -67,17 +69,11 @@ export default function AuctionStampOverlay({
         {/* Player mini header */}
         {player && (
           <div className="mb-4 flex items-center justify-center gap-3">
-            {player.photoUrl ? (
-              <img
-                src={player.photoUrl}
-                alt=""
-                className="w-12 h-12 rounded-full object-cover border-2 border-sky/40"
-              />
-            ) : (
-              <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-xl">
-                🏏
-              </div>
-            )}
+            <PlayerPhoto
+              src={player.photoUrl}
+              name={player.name}
+              className="w-12 h-12 rounded-full border-2 border-sky/40"
+            />
             <div className="text-left">
               <p className="font-display text-xl text-sky tracking-wide leading-tight">
                 {player.name}
@@ -117,17 +113,11 @@ export default function AuctionStampOverlay({
               Acquired By
             </p>
             <div className="flex items-center justify-center gap-2.5">
-              {team.teamLogoUrl ? (
-                <img
-                  src={team.teamLogoUrl}
-                  alt=""
-                  className="w-8 h-8 rounded-full object-cover border border-mint/40"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-mint/20 text-mint flex items-center justify-center text-xs">
-                  🏆
-                </div>
-              )}
+              <TeamLogo
+                src={team.teamLogoUrl}
+                teamName={team.teamName}
+                className="w-8 h-8 rounded-full"
+              />
               <span className="font-display text-2xl text-mint font-semibold tracking-wide">
                 {team.teamName}
               </span>

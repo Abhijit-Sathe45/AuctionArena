@@ -23,6 +23,7 @@ const registerAuctionSocketHandlers = require('./socket/auctionSocket');
 const auctionTimerService = require('./services/auctionTimerService');
 
 const app = express();
+app.set('trust proxy', 1); // Trust reverse proxies (Render, Vercel, Nginx) for HTTPS protocol detection
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: '*' },
@@ -50,6 +51,8 @@ app.use(morgan('dev'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => res.json({ status: 'Tennis Cricket Auction API is running' }));
+app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() }));
+app.get('/api/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/organizer-signup', organizerSignupRoutes);

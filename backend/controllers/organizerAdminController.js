@@ -3,6 +3,7 @@ const Category = require('../models/Category');
 const ExtraPointSet = require('../models/ExtraPointSet');
 const Player = require('../models/Player');
 const Team = require('../models/Team');
+const { deleteImages } = require('../utils/cloudinaryCleanup');
 
 // ---------- SETTINGS ----------
 async function getSettings(req, res) {
@@ -98,7 +99,11 @@ async function updatePlayer(req, res) {
   res.json(player);
 }
 async function deletePlayer(req, res) {
-  await Player.deleteOne({ _id: req.params.id, organizer: req.user.id });
+  const player = await Player.findOne({ _id: req.params.id, organizer: req.user.id });
+  if (player) {
+    if (player.photoUrl) await deleteImages([player.photoUrl]);
+    await Player.deleteOne({ _id: req.params.id, organizer: req.user.id });
+  }
   res.json({ message: 'Deleted' });
 }
 
@@ -116,20 +121,24 @@ async function listTeams(req, res) {
 }
 async function createTeamByAdmin(req, res) {
   // Admin manually adds an owner/team (no payment flow)
-  const settings = await AuctionSettings.findOne({ organizer: req.user.id });
+  let settings = await AuctionSettings.findOne({ organizer: req.user.id });
+  if (!settings) {
+    settings = await AuctionSettings.create({ organizer: req.user.id });
+  }
   const { ownerName, teamName, ownerPlaysMatch, ownerPhotoUrl, teamLogoUrl, phone, biddingPin } = req.body;
   const pin = biddingPin || Math.floor(1000 + Math.random() * 9000).toString();
+  const purse = settings.maxPursePerTeam || 10000;
   const team = await Team.create({
     organizer: req.user.id, ownerName, teamName, ownerPlaysMatch: !!ownerPlaysMatch,
     ownerPhotoUrl, teamLogoUrl, phone, paymentStatus: 'FREE',
-    totalPurse: settings.maxPursePerTeam, purseRemaining: settings.maxPursePerTeam,
+    totalPurse: purse, purseRemaining: purse,
     biddingPin: pin,
     isApproved: true,
   });
   res.status(201).json(team);
 }
 async function updateTeam(req, res) {
-  const allowed = ['isApproved', 'ownerName', 'teamName', 'ownerPlaysMatch', 'biddingPin'];
+  const allowed = ['isApproved', 'ownerName', 'teamName', 'ownerPlaysMatch', 'biddingPin', 'teamLogoUrl'];
   const update = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
   const team = await Team.findOneAndUpdate({ _id: req.params.id, organizer: req.user.id }, update, { new: true });
@@ -137,7 +146,14 @@ async function updateTeam(req, res) {
   res.json(team);
 }
 async function deleteTeam(req, res) {
-  await Team.deleteOne({ _id: req.params.id, organizer: req.user.id });
+  const team = await Team.findOne({ _id: req.params.id, organizer: req.user.id });
+  if (team) {
+    const urls = [];
+    if (team.ownerPhotoUrl) urls.push(team.ownerPhotoUrl);
+    if (team.teamLogoUrl) urls.push(team.teamLogoUrl);
+    if (urls.length) await deleteImages(urls);
+    await Team.deleteOne({ _id: req.params.id, organizer: req.user.id });
+  }
   res.json({ message: 'Deleted' });
 }
 

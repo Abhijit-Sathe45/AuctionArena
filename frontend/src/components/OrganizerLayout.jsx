@@ -5,25 +5,29 @@ import DemoSimulatorModal from './DemoSimulatorModal';
 
 const links = [
   { to: '/organizer/dashboard', label: 'Dashboard', icon: '📊' },
-  { to: '/organizer/players', label: 'Players', icon: '🏏' },
-  { to: '/organizer/teams', label: 'Teams', icon: '👥' },
-  { to: '/organizer/categories', label: 'Categories & Points', icon: '🏷️' },
-  { to: '/organizer/live', label: 'Live Auction', icon: '🔨' },
-  { to: '/organizer/history', label: 'History & PDFs', icon: '📜' },
-  { to: '/organizer/settings', label: 'Settings', icon: '⚙️' },
-  { to: '/organizer/how-to-use', label: 'How to Use', icon: '📖' },
+  { to: '/organizer/players', label: 'Players & Squads', icon: '🏏' },
+  { to: '/organizer/teams', label: 'Teams & Franchises', icon: '👥' },
+  { to: '/organizer/categories', label: 'Categories & Base Prices', icon: '🏷️' },
+  { to: '/organizer/live', label: 'Live Auction Desk', icon: '🔨' },
+  { to: '/organizer/analytics', label: 'Auction Analyst Studio', icon: '📈' },
+  { to: '/organizer/history', label: 'Bid History & PDFs', icon: '📜' },
+  { to: '/organizer/settings', label: 'Settings & Rules', icon: '⚙️' },
+  { to: '/organizer/how-to-use', label: 'Auction Handbook', icon: '📖' },
 ];
 
 export default function OrganizerLayout({ children }) {
   const { organizer, logoutOrganizer } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const isLiveAuction = location.pathname.startsWith('/organizer/live');
+  
+  // On Live Auction page, default sidebar to closed (3-line hamburger menu) for 100% full-screen arena
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
 
-  // Close mobile drawer on route navigation
+  // Close drawer on route change
   useEffect(() => {
-    setMobileOpen(false);
+    setSidebarOpen(false);
   }, [location.pathname]);
 
   function handleLogout() {
@@ -31,92 +35,146 @@ export default function OrganizerLayout({ children }) {
     navigate('/organizer/login');
   }
 
-  const currentLink = links.find(l => l.to === location.pathname || (l.to === '/organizer/live' && location.pathname === '/organizer/live-auction'));
+  const currentLink = links.find(
+    l => l.to === location.pathname || (l.to === '/organizer/live' && location.pathname === '/organizer/live-auction')
+  );
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-[#F7FAFE]">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC]">
       {/* Demo Tournament Simulator Modal */}
       <DemoSimulatorModal
         isOpen={showDemoModal}
         onClose={() => setShowDemoModal(false)}
         onDataChanged={() => {
-          // If on a page that needs reload, dispatch event or reload
           window.location.reload();
         }}
       />
 
-      {/* Mobile Top Navigation Bar */}
-      <header className="md:hidden bg-gradient-to-r from-white via-[#F4F8FF] to-white text-turf px-4 py-3 flex items-center justify-between sticky top-0 z-40 shadow-xs border-b border-sky/40 backdrop-blur-md">
+      {/* Top Navigation Bar with 3-Line Hamburger Menu */}
+      <header className="bg-[#0B1E3D] text-white px-4 py-2.5 flex items-center justify-between sticky top-0 z-40 shadow-sm border-b border-slate-700">
         <div className="flex items-center gap-3">
+          {/* 3-Line Structure Hamburger Button */}
           <button
-            onClick={() => setMobileOpen(o => !o)}
-            className="p-2 -ml-2 rounded-xl hover:bg-sky/25 active:bg-sky/35 text-turf flex items-center justify-center focus:outline-none transition-colors"
+            onClick={() => setSidebarOpen(o => !o)}
+            className="p-2 -ml-1 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center justify-center focus:outline-none transition-colors shadow-xs"
             aria-label="Toggle navigation menu"
+            title="Toggle Navigation Menu (☰)"
           >
-            {mobileOpen ? (
-              <span className="text-2xl leading-none">✕</span>
+            {sidebarOpen ? (
+              <span className="text-xl leading-none font-bold w-5 h-5 flex items-center justify-center">✕</span>
             ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              <div className="flex flex-col gap-1 w-5 justify-center items-center py-0.5">
+                <span className="w-5 h-0.5 bg-white rounded-full transition-all"></span>
+                <span className="w-5 h-0.5 bg-amber-300 rounded-full transition-all"></span>
+                <span className="w-5 h-0.5 bg-white rounded-full transition-all"></span>
+              </div>
             )}
           </button>
+
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-mint to-sky flex items-center justify-center text-sm shadow-xs border border-white">
-              🏆
+            {organizer?.logoUrl ? (
+              <img
+                src={organizer.logoUrl}
+                alt="Tournament Logo"
+                className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-contain p-0.5 bg-white border border-emerald-400/40 shadow-xs"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div
+              className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-[#0F5132] border border-emerald-400/40 items-center justify-center text-sm sm:text-base shadow-xs ${
+                organizer?.logoUrl ? 'hidden' : 'flex'
+              }`}
+            >
+              🏏
             </div>
             <div>
-              <p className="font-display text-lg tracking-wide leading-none text-turf font-bold">Auction Arena</p>
-              <p className="text-[11px] text-mauve-dark truncate max-w-[160px] font-semibold mt-0.5">
-                {currentLink?.label || organizer?.tournamentName}
+              <div className="flex items-center gap-1.5">
+                <p className="font-display text-sm sm:text-base tracking-wide leading-none text-white font-bold">
+                  Auction Arena
+                </p>
+                <span className="text-[8px] sm:text-[9px] font-black uppercase bg-amber-500 text-slate-950 px-1 py-0.2 rounded-xs">
+                  PRO
+                </span>
+              </div>
+              <p className="text-[10px] sm:text-[11px] text-slate-300 truncate max-w-[170px] sm:max-w-[280px] font-medium mt-0.5">
+                {organizer?.tournamentName || currentLink?.label || 'Cricket Auctioneer Desk'}
               </p>
             </div>
           </div>
         </div>
 
-        {organizer?.tournamentName && (
-          <span className="text-[11px] px-2.5 py-1 bg-orchid/15 border border-orchid/35 rounded-full text-orchid-dark font-extrabold truncate max-w-[130px] shadow-2xs">
-            {organizer.tournamentName}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isLiveAuction ? (
+            <span className="text-[10px] sm:text-xs px-2.5 py-1 bg-red-600/30 border border-red-500/50 rounded-full text-red-300 font-bold flex items-center gap-1.5 animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+              <span>LIVE DESK</span>
+            </span>
+          ) : (
+            organizer?.tournamentName && (
+              <span className="text-[10px] sm:text-xs px-2.5 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-amber-300 font-bold truncate max-w-[140px] sm:max-w-[200px]">
+                🏆 {organizer.tournamentName}
+              </span>
+            )
+          )}
+        </div>
       </header>
 
-      {/* Mobile Drawer Backdrop */}
-      {mobileOpen && (
+      {/* Drawer Backdrop */}
+      {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/40 z-40 md:hidden backdrop-blur-xs transition-opacity"
-          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 bg-black/60 z-40 backdrop-blur-xs transition-opacity animate-fade-in"
+          onClick={() => setSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar (Desktop Fixed & Locked with matching custom 5-color palette) */}
+      {/* Slide-out Sidebar Drawer Navigation */}
       <aside
-        className={`fixed top-0 left-0 z-40 w-64 md:w-60 h-screen bg-gradient-to-b from-[#FFFFFF] via-[#F4F8FF] to-[#FAF4FA] text-turf flex flex-col justify-between shrink-0 shadow-lg md:shadow-md border-r border-sky/50 transition-transform duration-300 ease-in-out md:translate-x-0 ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 left-0 z-50 w-72 sm:w-80 h-screen bg-[#0B1E3D] text-white flex flex-col justify-between shadow-2xl border-r border-slate-800 transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex flex-col flex-1 min-h-0">
           {/* Header Brand Section */}
-          <div className="p-4 sm:p-5 bg-gradient-to-r from-sky/35 via-white to-orchid/20 border-b border-sky/40 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-mint to-sky flex items-center justify-center text-lg shadow-sm border border-white shrink-0">
-                🏆
+          <div className="p-4 sm:p-5 bg-gradient-to-b from-[#061022] to-[#0B1E3D] border-b border-slate-800 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              {organizer?.logoUrl ? (
+                <img
+                  src={organizer.logoUrl}
+                  alt="Tournament Logo"
+                  className="w-10 h-10 rounded-xl object-contain p-0.5 bg-white border border-emerald-400/40 shadow-md shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div
+                className={`w-10 h-10 rounded-xl bg-[#0F5132] border border-emerald-400/40 items-center justify-center text-xl shadow-md shrink-0 ${
+                  organizer?.logoUrl ? 'hidden' : 'flex'
+                }`}
+              >
+                🏏
               </div>
               <div className="min-w-0">
-                <p className="font-display text-xl tracking-wide text-turf font-bold leading-tight truncate">
-                  Auction Arena
-                </p>
-                <div className="flex items-center gap-1 mt-0.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-mint animate-pulse shrink-0" />
-                  <p className="text-[11px] text-orchid-dark font-extrabold truncate max-w-[140px]">
-                    {organizer?.tournamentName || 'Organizer Panel'}
+                <div className="flex items-center gap-1.5">
+                  <p className="font-display text-lg tracking-wide text-white font-black leading-tight truncate">
+                    Auction Arena
                   </p>
+                  <span className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded-sm">
+                    PRO
+                  </span>
                 </div>
+                <p className="text-[11px] text-emerald-400 font-semibold truncate max-w-[150px] mt-0.5">
+                  {organizer?.tournamentName || 'Cricket Auctioneer'}
+                </p>
               </div>
             </div>
             <button
-              onClick={() => setMobileOpen(false)}
-              className="md:hidden p-1.5 rounded-xl text-mauve-dark hover:text-turf hover:bg-sky/25 transition-colors"
+              onClick={() => setSidebarOpen(false)}
+              className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors text-lg"
               aria-label="Close menu"
             >
               ✕
@@ -124,48 +182,52 @@ export default function OrganizerLayout({ children }) {
           </div>
 
           {/* Navigation Menu Links */}
-          <nav className="p-3 space-y-1.5 flex-1 overflow-y-auto">
+          <nav className="p-3 space-y-1 flex-1 overflow-y-auto scroll-touch">
             {links.map((l) => {
-              const isActiveRoute = location.pathname === l.to || (l.to === '/organizer/live' && location.pathname === '/organizer/live-auction');
+              const isActiveRoute =
+                location.pathname === l.to ||
+                (l.to === '/organizer/live' && location.pathname === '/organizer/live-auction');
               const isSettings = l.to === '/organizer/settings';
 
               return (
                 <React.Fragment key={l.to}>
-                  {/* Practice & Demo Simulator inserted RIGHT OVER Settings Tab */}
+                  {/* Practice & Demo Simulator placed right above Settings */}
                   {isSettings && (
                     <button
                       type="button"
                       onClick={() => {
                         setShowDemoModal(true);
-                        setMobileOpen(false);
+                        setSidebarOpen(false);
                       }}
-                      className="w-full flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 select-none bg-gradient-to-r from-orchid/15 via-sky/15 to-mint/15 hover:from-orchid/25 hover:to-mint/25 text-turf border border-orchid/30 font-bold group shadow-2xs text-left my-0.5 active:scale-98"
+                      className="w-full flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-all duration-150 select-none bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 group shadow-xs text-left my-1 active:scale-98"
                       title="Open Practice & Demo Tournament Simulator"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-6 h-6 rounded-lg bg-white/60 flex items-center justify-center text-base group-hover:scale-110 transition-transform">
+                        <span className="w-6 h-6 rounded-lg bg-amber-500/20 flex items-center justify-center text-sm group-hover:scale-110 transition-transform">
                           🎮
                         </span>
-                        <span className="truncate">Practice Demo</span>
+                        <span className="truncate">Mock Auction Practice</span>
                       </div>
-                      <span className="text-[10px] uppercase font-black px-1.5 py-0.5 rounded-md bg-mint text-turf-dark shadow-xs">
-                        Mock
+                      <span className="text-[9px] uppercase font-black px-1.5 py-0.5 rounded bg-amber-400 text-slate-950 shadow-2xs">
+                        Demo
                       </span>
                     </button>
                   )}
 
                   <NavLink
                     to={l.to}
-                    onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-150 select-none ${
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-150 select-none ${
                       isActiveRoute
-                        ? 'bg-gradient-to-r from-mint to-mint-dark text-turf-dark font-black shadow-sm shadow-mint/30 border border-mint-dark/25 translate-x-0.5'
-                        : 'text-turf/85 font-semibold hover:bg-sky/25 hover:text-turf active:bg-sky/35 border border-transparent hover:border-sky/40'
+                        ? 'bg-[#0F5132] text-white font-bold shadow-sm border border-emerald-500/40 translate-x-1'
+                        : 'text-slate-300 font-medium hover:bg-white/10 hover:text-white active:bg-white/15'
                     }`}
                   >
-                    <span className={`w-6 h-6 rounded-lg flex items-center justify-center text-base transition-colors ${
-                      isActiveRoute ? 'bg-white/60 text-turf-dark' : 'bg-white/40'
-                    }`}>
+                    <span
+                      className={`w-7 h-7 rounded-lg flex items-center justify-center text-base transition-colors ${
+                        isActiveRoute ? 'bg-black/20 text-white' : 'bg-white/5 text-slate-300'
+                      }`}
+                    >
                       {l.icon}
                     </span>
                     <span className="truncate">{l.label}</span>
@@ -176,28 +238,28 @@ export default function OrganizerLayout({ children }) {
           </nav>
         </div>
 
-        {/* Sidebar Footer: Tournament Info & Logout */}
-        <div className="p-3.5 border-t border-sky/40 bg-gradient-to-t from-orchid/15 via-white/80 to-transparent shrink-0 space-y-2">
-          <div className="px-2.5 py-1.5 bg-white/90 border border-sky/40 rounded-xl flex items-center justify-between text-[11px] shadow-2xs">
-            <span className="text-mauve-dark font-bold">Status:</span>
-            <span className="text-mint-dark font-extrabold flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-mint" />
-              Active Pass
+        {/* Sidebar Footer: Cricket Pass Info & Logout */}
+        <div className="p-3.5 border-t border-slate-800 bg-[#061022] shrink-0 space-y-2">
+          <div className="px-3 py-2 bg-slate-900/90 border border-slate-700/80 rounded-xl flex items-center justify-between text-xs shadow-2xs">
+            <span className="text-slate-400 font-medium flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Desk Live
             </span>
+            <span className="text-amber-300 font-bold">🏆 Verified</span>
           </div>
 
           <button
             onClick={handleLogout}
-            className="w-full px-3.5 py-2.5 text-xs sm:text-sm rounded-xl bg-rose/10 hover:bg-rose/20 active:bg-rose/25 text-rose border border-rose/30 flex items-center justify-center gap-2 transition-all font-bold shadow-xs active:scale-95"
+            className="w-full px-3 py-2 text-xs rounded-xl bg-red-500/15 hover:bg-red-500/25 active:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center justify-center gap-2 transition-all font-bold shadow-xs active:scale-95"
           >
             <span>🚪</span>
-            <span>Log out</span>
+            <span>Exit Auctioneer Desk</span>
           </button>
         </div>
       </aside>
 
-      {/* Main Content Area (Offset by sidebar width on desktop) */}
-      <main className="flex-1 md:ml-60 bg-[#F7FAFE] p-3.5 sm:p-6 min-h-screen max-w-full overflow-x-hidden min-w-0">
+      {/* Main Full-Width Content Container */}
+      <main className="flex-1 bg-[#F8FAFC] p-3 sm:p-5 lg:p-6 min-h-[calc(100vh-56px)] max-w-full overflow-x-hidden min-w-0">
         {children}
       </main>
     </div>

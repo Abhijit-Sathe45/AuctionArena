@@ -4,8 +4,12 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [organizer, setOrganizer] = useState(() => {
-    const saved = localStorage.getItem('organizerInfo');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('organizerInfo');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
   const [superAdmin, setSuperAdmin] = useState(() => {
     const saved = localStorage.getItem('superAdminEmail');

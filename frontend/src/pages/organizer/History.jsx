@@ -2,10 +2,14 @@ import React, { useEffect, useState } from 'react';
 import api from '../../api/axios';
 import OrganizerLayout from '../../components/OrganizerLayout';
 import AuctionAnalyticsWidget from '../../components/AuctionAnalyticsWidget';
+import { useToast } from '../../context/ToastContext';
 
 export default function History() {
+  const { showToast } = useToast();
   const [logs, setLogs] = useState([]);
   const [teams, setTeams] = useState([]);
+  const [downloadingTeamId, setDownloadingTeamId] = useState(null);
+  const [downloadingHistory, setDownloadingHistory] = useState(false);
 
   useEffect(() => {
     api.get('/auction/history').then(({ data }) => setLogs(data));
@@ -13,13 +17,35 @@ export default function History() {
   }, []);
 
   async function downloadTeamPDF(teamId, teamName) {
-    const res = await api.get(`/pdf/team/${teamId}`, { responseType: 'blob' });
-    triggerDownload(res.data, `${teamName.replace(/\s+/g, '_')}_summary.pdf`);
+    if (downloadingTeamId) return;
+    setDownloadingTeamId(teamId);
+    showToast(`Generating ${teamName} PDF report...`, 'info');
+    try {
+      const res = await api.get(`/pdf/team/${teamId}`, { responseType: 'blob' });
+      triggerDownload(res.data, `${teamName.replace(/\s+/g, '_')}_summary.pdf`);
+      showToast(`${teamName} summary PDF downloaded!`, 'success');
+    } catch (err) {
+      showToast('Failed to download team summary PDF', 'error');
+    } finally {
+      setDownloadingTeamId(null);
+    }
   }
+
   async function downloadHistoryPDF() {
-    const res = await api.get('/pdf/history', { responseType: 'blob' });
-    triggerDownload(res.data, 'auction_history.pdf');
+    if (downloadingHistory) return;
+    setDownloadingHistory(true);
+    showToast('Generating Full Tournament History PDF report...', 'info');
+    try {
+      const res = await api.get('/pdf/history', { responseType: 'blob' });
+      triggerDownload(res.data, 'auction_history.pdf');
+      showToast('Auction History PDF downloaded!', 'success');
+    } catch (err) {
+      showToast('Failed to download history PDF', 'error');
+    } finally {
+      setDownloadingHistory(false);
+    }
   }
+
   function triggerDownload(blobData, filename) {
     const url = window.URL.createObjectURL(new Blob([blobData]));
     const link = document.createElement('a');
@@ -34,9 +60,22 @@ export default function History() {
           <h1 className="font-display text-2xl sm:text-3xl text-turf">History & Analytics</h1>
           <p className="text-mauve-dark text-xs sm:text-sm mt-0.5">Full tournament leaderboard, economy metrics, and downloadable PDF summaries.</p>
         </div>
-        <button className="btn-primary text-xs sm:text-sm py-2.5 px-5 w-full sm:w-auto shrink-0 font-bold shadow-md shadow-mint/20" onClick={downloadHistoryPDF}>
-          📥 Download Full Auction History (PDF)
-        </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+          <a
+            href="/organizer/analytics"
+            className="text-xs sm:text-sm py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 font-bold shadow-xs flex items-center justify-center gap-2 transition active:scale-95 flex-1 sm:flex-initial"
+          >
+            <span>📈</span>
+            <span>Auction Analyst Studio</span>
+          </a>
+          <button
+            className="btn-primary text-xs sm:text-sm py-2.5 px-5 w-full sm:w-auto shrink-0 font-bold shadow-md shadow-mint/20 flex items-center justify-center gap-2 disabled:opacity-60"
+            onClick={downloadHistoryPDF}
+            disabled={downloadingHistory}
+          >
+            {downloadingHistory ? '⏳ Generating PDF...' : '📥 Download Full History (PDF)'}
+          </button>
+        </div>
       </div>
 
       {/* Live Tournament Analytics & Leaderboard Widget */}
@@ -48,9 +87,16 @@ export default function History() {
         <h2 className="font-semibold text-sm sm:text-base mb-3 text-turf">Per-Team Summary PDFs</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
           {teams.map(t => (
-            <button key={t._id} onClick={() => downloadTeamPDF(t._id, t.teamName)} className="btn-secondary text-xs sm:text-sm py-2.5 px-3 flex items-center justify-between hover:border-mint/50">
-              <span className="truncate">{t.teamName}</span>
-              <span className="shrink-0 text-xs opacity-80">📄 PDF</span>
+            <button
+              key={t._id}
+              onClick={() => downloadTeamPDF(t._id, t.teamName)}
+              disabled={downloadingTeamId === t._id}
+              className="btn-secondary text-xs sm:text-sm py-2.5 px-3 flex items-center justify-between hover:border-emerald-500/50 hover:bg-emerald-50/50 transition disabled:opacity-50"
+            >
+              <span className="truncate font-semibold">{t.teamName}</span>
+              <span className="shrink-0 text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-md">
+                {downloadingTeamId === t._id ? '⏳' : '📄 PDF'}
+              </span>
             </button>
           ))}
           {teams.length === 0 && (

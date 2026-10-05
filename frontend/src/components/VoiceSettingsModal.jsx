@@ -26,10 +26,16 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
     return !isNaN(p) ? p : 1.05;
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [langFilter, setLangFilter] = useState("all");
 
   useEffect(() => {
     if (isOpen) {
-      setSelectedId(getActiveProfileId());
+      const activeId = getActiveProfileId();
+      setSelectedId(activeId);
+      const activeProf = VOICE_PROFILES.find((p) => p.id === activeId);
+      if (activeProf?.langMode) {
+        setLangFilter(activeProf.langMode);
+      }
       const voices = getAvailableSystemVoices();
       setSystemVoices(voices);
     } else {
@@ -39,6 +45,11 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const filteredProfiles = VOICE_PROFILES.filter((p) => {
+    if (langFilter === "all") return true;
+    return p.langMode === langFilter;
+  });
 
   function handlePlaySample(profileId) {
     unlockAudio();
@@ -76,7 +87,22 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
 
   function handleTestCustom() {
     unlockAudio();
-    speak("Welcome to the live auction! 25 thousand rupees by Royal Strikers. Sold!", {
+    let phrase = "Welcome to the live auction! 25 thousand rupees by Royal Strikers. Sold!";
+    if (customVoiceUri) {
+      const v = systemVoices.find((vox) => vox.voiceURI === customVoiceUri || vox.name === customVoiceUri);
+      if (v && (v.lang.toLowerCase().startsWith("hi") || v.name.toLowerCase().includes("hindi") || v.name.toLowerCase().includes("हिन्दी"))) {
+        phrase = "लाइव नीलामी में आपका स्वागत है! 25 हज़ार रुपए रॉयल स्ट्राइकर्स की तरफ से... और ये खिलाड़ी बिक गए!";
+      }
+    } else {
+      const p = VOICE_PROFILES.find((prof) => prof.id === selectedId);
+      if (p?.langMode === "hi") {
+        phrase = "लाइव नीलामी में आपका स्वागत है! 25 हज़ार रुपए रॉयल स्ट्राइकर्स की तरफ से... और ये खिलाड़ी बिक गए!";
+      } else if (p?.langMode === "hinglish") {
+        phrase = "Welcome to the live auction! 25 thousand rupaye by Royal Strikers... Aur ye player SOLD!";
+      }
+    }
+
+    speak(phrase, {
       profileId: selectedId,
       customVoiceUri: customVoiceUri || undefined,
       rate,
@@ -98,7 +124,7 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
                 Choose AI Auctioneer Voice
               </h2>
               <p className="text-xs text-mauve-dark font-medium">
-                Select your preferred tone, accent, and auctioneer style
+                Select your preferred tone, language, and auctioneer style
               </p>
             </div>
           </div>
@@ -110,9 +136,61 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
           </button>
         </div>
 
+        {/* Language Tabs */}
+        <div className="px-4 sm:px-5 pt-3 pb-1 bg-[#FAF4FA] border-b border-mauve/20 flex items-center gap-1.5 overflow-x-auto scroll-touch">
+          <span className="text-[11px] font-bold text-mauve-dark uppercase mr-1">Language:</span>
+          <button
+            type="button"
+            onClick={() => setLangFilter("all")}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+              langFilter === "all"
+                ? "bg-mint text-turf shadow-sm"
+                : "bg-white text-mauve-dark hover:bg-sky/20"
+            }`}
+          >
+            All ({VOICE_PROFILES.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setLangFilter("hinglish")}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              langFilter === "hinglish"
+                ? "bg-orchid-dark text-white shadow-sm"
+                : "bg-white text-orchid-dark hover:bg-orchid/15"
+            }`}
+          >
+            <span>⚡</span>
+            <span>Hinglish (हिंग्लिश)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLangFilter("hi")}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              langFilter === "hi"
+                ? "bg-turf text-white shadow-sm"
+                : "bg-white text-turf hover:bg-sky/20"
+            }`}
+          >
+            <span>🇮🇳</span>
+            <span>हिन्दी (Hindi)</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLangFilter("en")}
+            className={`px-3 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 ${
+              langFilter === "en"
+                ? "bg-sky-dark text-white shadow-sm"
+                : "bg-white text-turf hover:bg-sky/20"
+            }`}
+          >
+            <span>🌐</span>
+            <span>English</span>
+          </button>
+        </div>
+
         {/* Voice Option Cards */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-3 flex-1 scroll-touch bg-[#F7FAFE]">
-          {VOICE_PROFILES.map((profile, idx) => {
+          {filteredProfiles.map((profile, idx) => {
             const isSelected = selectedId === profile.id && !customVoiceUri;
             const isPlaying = playingId === profile.id;
 
@@ -143,10 +221,15 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
                       <span className="font-bold text-sm sm:text-base text-turf">
                         {idx + 1}. {profile.name}
                       </span>
+                      {profile.badge && (
+                        <span className="text-[10px] uppercase font-black tracking-wider px-2 py-0.5 rounded-full bg-mint/30 text-turf-dark border border-mint">
+                          {profile.badge}
+                        </span>
+                      )}
                       <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-orchid/20 text-orchid-dark border border-orchid/30">
                         {profile.accent}
                       </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-mint/25 text-mint-dark">
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky/30 text-turf">
                         {profile.gender}
                       </span>
                     </div>
@@ -169,7 +252,7 @@ export default function VoiceSettingsModal({ isOpen, onClose }) {
                   }`}
                 >
                   <span>{isPlaying ? "⏹" : "▶"}</span>
-                  <span>{isPlaying ? "Stop" : "Sample"}</span>
+                  <span>{isPlaying ? "Stop" : "Audition"}</span>
                 </button>
               </div>
             );

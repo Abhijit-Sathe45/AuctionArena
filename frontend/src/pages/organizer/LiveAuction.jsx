@@ -11,6 +11,9 @@ import VoiceSettingsModal from "../../components/VoiceSettingsModal";
 import StreamOverlayModal from "../../components/StreamOverlayModal";
 import LiveCommentaryFeed from "../../components/LiveCommentaryFeed";
 import DemoSimulatorModal from "../../components/DemoSimulatorModal";
+import CricketAuctionPaddle from "../../components/CricketAuctionPaddle";
+import PlayerAuctionPlaque from "../../components/PlayerAuctionPlaque";
+import { getNextBidAmount } from "../../utils/bidIncrement";
 import { getSocket, emitWithAck } from "../../socket";
 import {
   unlockAudio,
@@ -26,6 +29,7 @@ import {
   announceSold,
   announceUnsold,
   stopCommentary,
+  getActiveLanguageMode,
 } from "../../utils/commentaryService";
 import {
   createIntroCommentary,
@@ -41,9 +45,11 @@ import {
 export default function LiveAuction() {
   const { showToast } = useToast();
   const [state, setState] = useState(null);
+  const [settings, setSettings] = useState(null);
   const [teams, setTeams] = useState([]);
   const [categories, setCategories] = useState([]);
   const [queuePlayers, setQueuePlayers] = useState([]); // players currently in the shuffled queue, for preview
+  const [onlineTeamIds, setOnlineTeamIds] = useState([]); // teams with owners currently connected online
   const [status, setStatus] = useState({ type: "", message: "" });
   const [busy, setBusy] = useState(false); // true while any action request is in flight
   const [pendingTeamId, setPendingTeamId] = useState(null); // which team's bid button is currently mid-click
@@ -122,25 +128,35 @@ export default function LiveAuction() {
   }, [state?.currentPlayer, state?.countdownEnabled, state?.biddingEndsAt, state?.currentBidTeam, state?.currentBidAmount]);
 
   const refresh = useCallback(async () => {
-    const [{ data: s }, { data: t }, { data: c }] = await Promise.all([
+    const [{ data: s }, { data: t }, { data: c }, settsRes] = await Promise.all([
       api.get("/auction/state"),
       api.get("/organizer-admin/teams"),
       api.get("/organizer-admin/categories"),
+      api.get("/organizer-admin/settings").catch(() => null),
     ]);
     setState(s);
     setTeams(t);
     setCategories(c);
+    if (settsRes?.data) setSettings(settsRes.data);
+    if (Array.isArray(s.onlineTeamIds)) {
+      setOnlineTeamIds(s.onlineTeamIds);
+    }
 
     // Keep the queue preview in sync with the backend queue after any update
     if (s.currentCategory && s.playerQueue?.length) {
-      const { data: players } = await api.get(
-        `/organizer-admin/players?status=PENDING`,
-      );
-      const byId = {};
-      players.forEach((p) => {
-        byId[p._id] = p;
-      });
-      setQueuePlayers(s.playerQueue.map((id) => byId[id]).filter(Boolean));
+      const hasPopulated = s.playerQueue.some((p) => p && typeof p === "object" && p.name);
+      if (hasPopulated) {
+        setQueuePlayers(s.playerQueue.filter((p) => p && typeof p === "object" && p.name));
+      } else {
+        const { data: players } = await api.get(
+          `/organizer-admin/players?status=PENDING`,
+        );
+        const byId = {};
+        players.forEach((p) => {
+          byId[p._id] = p;
+        });
+        setQueuePlayers(s.playerQueue.map((id) => byId[id?._id || id] || (typeof id === 'object' ? id : null)).filter(Boolean));
+      }
     } else {
       setQueuePlayers([]);
     }
@@ -161,6 +177,13 @@ export default function LiveAuction() {
     const socket = getSocket();
     socket.connect();
     socket.emit("join-auction", info.id);
+
+    socket.on("online-teams-update", (payload) => {
+      if (Array.isArray(payload?.onlineTeamIds)) {
+        setOnlineTeamIds(payload.onlineTeamIds);
+      }
+    });
+
     socket.on("auction-update", (payload) => {
       if (payload?.state) {
         setState(payload.state);
@@ -285,6 +308,7 @@ export default function LiveAuction() {
     });
     return () => {
       socket.off("auction-update");
+      socket.off("online-teams-update");
       socket.disconnect();
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
     };
@@ -328,11 +352,12 @@ export default function LiveAuction() {
     try {
       const token = localStorage.getItem("organizerToken");
       try {
-        const data = await emitWithAck(socketEvent, {
+        const res = await emitWithAck(socketEvent, {
           ...socketPayload,
           token,
         });
-        if (data) setState(data);
+        const newState = res?.state || res;
+        if (newState) setState(newState);
       } catch (socketErr) {
         const isConnectivityIssue =
           socketErr.message === "SOCKET_NOT_CONNECTED" ||
@@ -374,6 +399,22 @@ export default function LiveAuction() {
     );
   async function placeBid(teamId) {
     if (pendingTeamId) return;
+    const targetTeam = teams.find((t) => (t._id || t).toString() === teamId.toString());
+    const currentBid = state?.currentBidAmount || 0;
+    const requiredBid = state?.currentPlayer
+      ? currentBid > 0
+        ? getNextBidAmount(currentBid, settings?.bidIncrementRules)
+        : (state?.currentPlayer?.basePrice || 0)
+      : 0;
+    if (targetTeam) {
+      const isFinished =
+        (targetTeam.purseRemaining || 0) <= 0 ||
+        (requiredBid > 0 && (targetTeam.purseRemaining || 0) < requiredBid);
+      if (isFinished) {
+        showToast(`${targetTeam.teamName}'s purse is finished! Cannot place bid.`, "error");
+        return;
+      }
+    }
     setPendingTeamId(teamId);
     try {
       await callActionFast("auction:bid", { teamId }, () =>
@@ -490,6 +531,12 @@ export default function LiveAuction() {
 
   const currentPlayer = state.currentPlayer;
   const currentCategory = state.currentCategory;
+  const currentBidAmount = state.currentBidAmount || 0;
+  const nextBidAmount = currentPlayer
+    ? currentBidAmount > 0
+      ? getNextBidAmount(currentBidAmount, settings?.bidIncrementRules)
+      : (currentPlayer.basePrice || 0)
+    : 0;
 
   return (
     <OrganizerLayout>
@@ -553,36 +600,42 @@ export default function LiveAuction() {
                 unlockAudio();
                 setShowVoiceSettingsModal(true);
               }}
-              title="Change Voice Tone & Accent (5 Options)"
-              className={`text-xs sm:text-sm py-2 px-2.5 font-semibold border-l transition-all duration-150 active:scale-95 flex items-center gap-1 ${
+              title="Change Voice Tone, Accent & Language (Hinglish / Hindi / English)"
+              className={`text-xs sm:text-sm py-2 px-2.5 font-semibold border-l transition-all duration-150 active:scale-95 flex items-center gap-1.5 ${
                 commentaryEnabled
                   ? "bg-mint hover:bg-mint-dark text-turf-dark border-turf-dark/20"
                   : "bg-black/10 hover:bg-black/20 text-turf border-black/10"
               }`}
             >
               <span>⚙️</span>
-              <span className="hidden sm:inline">Voice</span>
+              <span className="hidden sm:inline">
+                {getActiveLanguageMode() === "hinglish"
+                  ? "⚡ Hinglish"
+                  : getActiveLanguageMode() === "hi"
+                  ? "🇮🇳 हिन्दी"
+                  : "🌐 English"}
+              </span>
             </button>
           </div>
 
           {/* OBS Stream Overlay Button */}
           <button
             onClick={() => setShowOverlayModal(true)}
-            className="inline-flex items-center gap-1.5 btn-primary text-xs sm:text-sm py-2 px-3 sm:px-4 shadow-sm font-bold"
+            className="inline-flex items-center gap-1.5 btn-navy text-xs sm:text-sm py-2 px-3 sm:px-4 shadow-xs font-bold"
             title="Open OBS / vMix Live Stream Overlay Link Generator"
           >
             <span>🎥</span>
-            <span>OBS Overlay</span>
+            <span>Cricket TV Graphics</span>
           </button>
 
           {/* Demo Simulator Launcher Button */}
           <button
             onClick={() => setShowDemoModal(true)}
-            className="inline-flex items-center gap-1.5 bg-white hover:bg-sky/20 text-turf border border-mauve/35 font-bold text-xs sm:text-sm py-2 px-3 sm:px-4 rounded-xl shadow-sm transition-all duration-150 active:scale-95"
+            className="inline-flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 border border-amber-500/30 font-bold text-xs sm:text-sm py-2 px-3 sm:px-4 rounded-xl shadow-xs transition-all duration-150 active:scale-95"
             title="Open Demo & Practice Auction Simulator"
           >
             <span>🎮</span>
-            <span>Practice Simulator</span>
+            <span>Mock Practice</span>
           </button>
 
           <button
@@ -592,46 +645,46 @@ export default function LiveAuction() {
             }}
             className="btn-secondary text-xs sm:text-sm py-2 px-3 sm:px-4"
           >
-            {showVideo ? "📹 Hide Video Broadcast" : "📹 Start Video Broadcast"}
+            {showVideo ? "📹 Hide Broadcast" : "📹 Video Broadcast"}
           </button>
         </div>
       </div>
 
       {/* Practice Simulator Control Bar */}
-      <div className="mb-4 bg-gradient-to-r from-sky/25 via-orchid/20 to-mint/20 border border-mauve/30 rounded-2xl p-3 sm:p-4 text-turf shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div className="mb-4 bg-slate-900 border border-slate-800 rounded-2xl p-3.5 sm:p-4 text-white shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-mint/20 text-mint-dark flex items-center justify-center text-lg shrink-0 shadow-inner">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-lg shrink-0">
             🤖
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-xs sm:text-sm text-turf">
-                AI Bot Auto-Bidder Simulator
+              <span className="font-bold text-xs sm:text-sm text-white">
+                AI Auto-Bidder Practice Simulator
               </span>
               <span
                 className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full font-bold ${
                   botActive
-                    ? "bg-mint/25 text-mint-dark border border-mint/40 animate-pulse"
-                    : "bg-white/80 text-mauve-dark border border-mauve/25"
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-400/40 animate-pulse"
+                    : "bg-slate-800 text-slate-400 border border-slate-700"
                 }`}
               >
                 {botActive ? "Active & Bidding" : "Standby"}
               </span>
             </div>
-            <p className="text-[11px] text-mauve-dark font-medium">
-              Simulate realistic team bidding wars hands-free to test timers, commentary, and sound.
+            <p className="text-[11px] text-slate-400 font-medium">
+              Simulate franchise bidding wars hands-free to test timers, commentary, and sound.
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap self-end md:self-auto">
           {/* Speed Selector */}
-          <div className="flex items-center bg-white rounded-xl p-1 border border-mauve/25 text-xs shadow-inner">
+          <div className="flex items-center bg-slate-800 rounded-xl p-1 border border-slate-700 text-xs">
             <button
               type="button"
               onClick={() => setBotSpeed("normal")}
               className={`px-2.5 py-1 rounded-lg font-medium transition ${
-                botSpeed === "normal" ? "bg-mint text-turf-dark font-bold shadow-sm" : "text-mauve-dark hover:text-turf"
+                botSpeed === "normal" ? "bg-[#0F5132] text-white font-bold shadow-xs" : "text-slate-400 hover:text-white"
               }`}
             >
               Realistic (2.4s)
@@ -640,7 +693,7 @@ export default function LiveAuction() {
               type="button"
               onClick={() => setBotSpeed("fast")}
               className={`px-2.5 py-1 rounded-lg font-medium transition ${
-                botSpeed === "fast" ? "bg-mint text-turf-dark font-bold shadow-sm" : "text-mauve-dark hover:text-turf"
+                botSpeed === "fast" ? "bg-[#0F5132] text-white font-bold shadow-xs" : "text-slate-400 hover:text-white"
               }`}
             >
               Fast (1.3s)
@@ -649,7 +702,7 @@ export default function LiveAuction() {
               type="button"
               onClick={() => setBotSpeed("intense")}
               className={`px-2.5 py-1 rounded-lg font-medium transition ${
-                botSpeed === "intense" ? "bg-rose text-white font-bold shadow-sm" : "text-mauve-dark hover:text-turf"
+                botSpeed === "intense" ? "bg-red-600 text-white font-bold shadow-xs" : "text-slate-400 hover:text-white"
               }`}
             >
               Duel 🔥
@@ -663,10 +716,10 @@ export default function LiveAuction() {
               unlockAudio();
               setBotActive((a) => !a);
             }}
-            className={`text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow-sm active:scale-95 ${
+            className={`text-xs px-3 py-1.5 rounded-xl font-bold transition flex items-center gap-1.5 shadow-xs active:scale-95 ${
               botActive
-                ? "bg-rose hover:bg-rose-dark text-white"
-                : "bg-mint hover:bg-mint-dark text-turf-dark"
+                ? "bg-red-600 hover:bg-red-700 text-white"
+                : "bg-[#0F5132] hover:bg-[#0A3E26] text-white"
             }`}
           >
             <span>{botActive ? "⏹ Stop Bots" : "▶ Start Auto-Bots"}</span>
@@ -674,9 +727,15 @@ export default function LiveAuction() {
         </div>
       </div>
 
-      <p className="text-xs sm:text-sm text-black/50 mb-4 sm:mb-6">
-        Round {state.currentRound}
-        {currentCategory ? ` · Category: ${currentCategory.name}` : ""}
+      <p className="text-xs sm:text-sm text-slate-500 mb-4 sm:mb-6 font-semibold flex items-center gap-2">
+        <span className="px-2 py-0.5 bg-slate-200 text-slate-800 rounded text-xs font-bold font-mono">
+          Round {state.currentRound}
+        </span>
+        {currentCategory ? (
+          <span className="text-slate-700">
+            · Category: <strong className="text-[#0F5132]">{currentCategory.name}</strong> (Base: ₹{currentCategory.basePrice?.toLocaleString("en-IN")})
+          </span>
+        ) : ""}
       </p>
 
       {showVideo && (
@@ -692,24 +751,31 @@ export default function LiveAuction() {
       {!currentPlayer ? (
         <div className="mt-3 space-y-4 sm:space-y-6">
           {/* STEP 1: Choose category */}
-          <div className="card">
-            <h2 className="font-semibold text-sm sm:text-base mb-3">Step 1 — Choose a Category</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3">
+          <div className="card border-slate-200">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-6 h-6 rounded-full bg-[#0F5132] text-white flex items-center justify-center text-xs font-bold">1</span>
+              <h2 className="font-bold text-sm sm:text-base text-slate-900">Choose Player Category / Role</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {categories.map((c) => (
                 <button
                   key={c._id}
                   disabled={busy}
                   onClick={() => selectCategory(c._id)}
-                  className={`text-left border-2 rounded-2xl p-3.5 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${currentCategory?._id === c._id ? "border-mint bg-mint/15 shadow-sm" : "border-mauve/30 hover:border-mint/60"}`}
+                  className={`text-left border-2 rounded-2xl p-3.5 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                    currentCategory?._id === c._id
+                      ? "border-[#0F5132] bg-emerald-50 shadow-xs"
+                      : "border-slate-200 hover:border-slate-400 bg-white"
+                  }`}
                 >
-                  <p className="font-semibold text-xs sm:text-sm truncate text-turf">{c.name}</p>
-                  <p className="text-[11px] sm:text-xs text-mauve-dark mt-0.5">
-                    Base: Rs. {c.basePrice}
+                  <p className="font-bold text-xs sm:text-sm truncate text-slate-900">🏏 {c.name}</p>
+                  <p className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-0.5">
+                    Base: ₹{c.basePrice?.toLocaleString("en-IN")}
                   </p>
                 </button>
               ))}
               {categories.length === 0 && (
-                <p className="text-black/40 text-sm col-span-full">
+                <p className="text-slate-400 text-sm col-span-full">
                   No categories yet — create some in the Categories tab first.
                 </p>
               )}
@@ -718,33 +784,45 @@ export default function LiveAuction() {
 
           {/* STEP 2: Shuffle & preview queue */}
           {currentCategory && (
-            <div className="card">
+            <div className="card border-slate-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
-                <h2 className="font-semibold text-sm sm:text-base">
-                  Step 2 — Player Order ({queuePlayers.length} in queue)
-                </h2>
+                <div className="flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-[#0F5132] text-white flex items-center justify-center text-xs font-bold">2</span>
+                  <h2 className="font-bold text-sm sm:text-base text-slate-900">
+                    Cricket Player Auction Order ({queuePlayers.length} in queue)
+                  </h2>
+                </div>
                 <button
                   onClick={shuffleQueue}
                   disabled={busy}
-                  className="btn-secondary text-xs sm:text-sm py-1.5 px-3 disabled:opacity-50 w-full sm:w-auto"
+                  className="btn-secondary text-xs sm:text-sm py-1.5 px-3 disabled:opacity-50 w-full sm:w-auto font-bold"
                 >
-                  🔀 Shuffle Player Order
+                  🔀 Shuffle Order
                 </button>
               </div>
               {queuePlayers.length > 0 ? (
-                <ol className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs sm:text-sm max-h-56 overflow-y-auto scroll-touch pr-1">
-                  {queuePlayers.map((p, i) => (
-                    <li
-                      key={p._id}
-                      className="px-3 py-2 rounded-xl bg-sky/10 border border-sky/20 flex items-center justify-between"
-                    >
-                      <span className="truncate font-medium text-turf">{i + 1}. {p.name}</span>
-                      <span className="text-xs text-mauve-dark shrink-0 ml-2">{p.playerType}</span>
-                    </li>
-                  ))}
+                <ol className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3 text-xs sm:text-sm max-h-64 overflow-y-auto scroll-touch p-1">
+                  {queuePlayers.map((p, i) => {
+                    const playerName = p?.name || (typeof p === "string" ? `Player #${i + 1}` : "Cricketer");
+                    const playerRole = p?.playerType || "Player";
+                    const key = p?._id || `queue-${i}`;
+                    return (
+                      <li
+                        key={key}
+                        className="transition-transform duration-150 hover:scale-[1.02]"
+                      >
+                        <PlayerAuctionPlaque
+                          name={playerName}
+                          lotNumber={(i + 1).toString().padStart(2, "0")}
+                          role={playerRole}
+                          variant="compact"
+                        />
+                      </li>
+                    );
+                  })}
                 </ol>
               ) : (
-                <p className="text-black/40 text-sm">
+                <p className="text-slate-400 text-sm">
                   No pending approved players in this category.
                 </p>
               )}
@@ -753,14 +831,17 @@ export default function LiveAuction() {
 
           {/* STEP 3: Start auction */}
           {currentCategory && queuePlayers.length > 0 && (
-            <div className="card text-center py-6 sm:py-8 shadow-md border-mint/30">
-              <h2 className="font-semibold text-sm sm:text-base mb-3">Step 3 — Start the Auction</h2>
+            <div className="card text-center py-6 sm:py-8 shadow-sm border-emerald-500/40 bg-gradient-to-b from-white to-emerald-50/30">
+              <h2 className="font-bold text-base sm:text-lg text-slate-900 mb-2">Step 3 — Bring Player to the Hammer</h2>
+              <p className="text-xs text-slate-500 max-w-md mx-auto mb-4">
+                Launch the bidding round for the next cricketer in queue with live audio commentary.
+              </p>
               <button
-                className="btn-primary py-3 px-8 text-base disabled:opacity-50 shadow-lg shadow-mint/25 font-bold"
+                className="btn-primary py-3 px-8 text-base font-bold shadow-md"
                 disabled={busy}
                 onClick={() => nextPlayer()}
               >
-                Start Auction (Next in Queue)
+                🔨 Bring Next Cricketer to Auction
               </button>
             </div>
           )}
@@ -776,82 +857,112 @@ export default function LiveAuction() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mt-3">
-          <div className="lg:col-span-1 card text-center p-4 sm:p-5 shadow-lg border-mauve/20">
-            <PlayerPhoto src={currentPlayer.photoUrl} sizeClass="w-32 h-32 sm:w-40 sm:h-40" />
-            <h2 className="font-display text-2xl sm:text-3xl text-turf mt-2">
-              {currentPlayer.name}
-            </h2>
-            <p className="text-mauve-dark text-xs sm:text-sm">
-              {currentPlayer.playerType} · Age {currentPlayer.age}
-            </p>
-            <p className="text-mauve-dark text-xs sm:text-sm">
-              Bat: {currentPlayer.battingStyle.replace("_", " ")}
-            </p>
-            <p className="text-mauve-dark text-xs sm:text-sm mb-4">
-              Bowl: {currentPlayer.bowlingStyle.replace("_", " ")}
-            </p>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 mt-3">
+          {/* Live Player Profile Box (Cricket Card) */}
+          <div className="lg:col-span-5 xl:col-span-4 card text-center p-3.5 sm:p-4 shadow-sm border-slate-200">
+            <div className="relative inline-block mx-auto mb-1">
+              <PlayerPhoto
+                src={currentPlayer?.photoUrl}
+                photoUrl={currentPlayer?.photoUrl}
+                name={currentPlayer?.name}
+                sizeClass="w-28 h-28 sm:w-32 sm:h-32"
+              />
+              <span className="absolute bottom-0 right-0 bg-[#0B1E3D] text-amber-300 text-[10px] font-black px-2 py-0.5 rounded-full border border-amber-400/40 shadow-sm">
+                🏏 {currentPlayer?.playerType || "Cricketer"}
+              </span>
+            </div>
 
-            {/* Synchronized Countdown Timer (when Countdown is ON) */}
+            {/* 3D Wooden IPL Auction Nameplate Plaque */}
+            <PlayerAuctionPlaque
+              name={currentPlayer?.name || "Player in Auction"}
+              lotNumber={currentPlayer?.lotNumber || currentPlayer?.jerseyNumber || "01"}
+              role={currentPlayer?.playerType}
+              league="IPL"
+              variant="hero"
+            />
+
+            <div className="flex flex-wrap items-center justify-center gap-1.5 my-2">
+              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-semibold">
+                Age: {currentPlayer?.age || "—"}
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-800 border border-amber-200 text-xs font-semibold">
+                🏏 {currentPlayer?.battingStyle?.replace("_", " ") || "Right Hand Bat"}
+              </span>
+              <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200 text-xs font-semibold">
+                ⚡ {currentPlayer?.bowlingStyle?.replace("_", " ") || "Right Arm Fast"}
+              </span>
+            </div>
+
+            {/* Synchronized Countdown Timer */}
             {state.countdownEnabled && timeLeft !== null && (
               <div
-                className={`rounded-2xl p-3 border mb-3 transition-all duration-300 ${
+                className={`rounded-2xl p-2.5 border mb-3 transition-all duration-300 ${
                   timeLeft <= 5
-                    ? "bg-rose/15 border-rose/50 shadow-[0_0_15px_rgba(222,108,131,0.3)] animate-timer-heartbeat"
+                    ? "bg-red-50 border-red-300 text-red-700 animate-timer-heartbeat"
                     : timeLeft <= 15
-                    ? "bg-orchid/15 border-orchid/40"
-                    : "bg-mint/10 border-mint/30"
+                    ? "bg-amber-50 border-amber-300 text-amber-800"
+                    : "bg-emerald-50 border-emerald-300 text-emerald-800"
                 }`}
               >
-                <p className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-mauve-dark flex items-center justify-center gap-1.5">
+                <p className="text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5">
                   <span>⏱️</span>
-                  <span>{timeLeft <= 5 ? "Bidding Ending Soon!" : "Auction Countdown"}</span>
+                  <span>{timeLeft <= 5 ? "HAMMER FALLING SOON!" : "Cricket Auction Clock"}</span>
                 </p>
-                <p
-                  className={`font-display text-3xl sm:text-4xl font-bold tracking-widest mt-0.5 ${
-                    timeLeft <= 5
-                      ? "text-rose"
-                      : timeLeft <= 15
-                      ? "text-orchid-dark"
-                      : "text-mint-dark"
-                  }`}
-                >
+                <p className="font-scoreboard text-2xl sm:text-3xl font-black tracking-wider mt-0.5">
                   {formatTime(timeLeft)}
                 </p>
                 {timeLeft === 0 && (
-                  <p className="text-[10px] text-rose font-semibold animate-pulse mt-0.5">
-                    Time expired · Finalizing result…
+                  <p className="text-[10px] text-red-600 font-bold animate-pulse mt-0.5">
+                    Time expired · Under the hammer…
                   </p>
                 )}
               </div>
             )}
 
-            <div className="bg-mint/15 rounded-2xl p-4 border border-mint/30 shadow-inner">
-              <p className="text-[11px] sm:text-xs text-mauve-dark font-semibold uppercase tracking-wider">Current Bid</p>
-              <p className="font-display text-3xl sm:text-4xl text-mint-dark mt-0.5 font-bold">
-                Rs. {state.currentBidAmount.toLocaleString("en-IN")}
+            {/* Current Highest Bid Display */}
+            <div className="bg-[#0B1E3D] text-white rounded-2xl p-3.5 border border-slate-700 shadow-sm">
+              <p className="text-[10px] text-amber-300 font-bold uppercase tracking-wider">
+                Current Bid Price
               </p>
-              {state.currentBidTeam && (
-                <p className="text-xs sm:text-sm mt-1.5 font-bold text-turf flex items-center justify-center gap-1.5">
-                  <span>by</span>
-                  <span className="truncate max-w-[180px]">{state.currentBidTeam.teamName}</span>
-                </p>
+              <p className="font-scoreboard text-2xl sm:text-3xl text-white font-black mt-0.5">
+                ₹{state.currentBidAmount.toLocaleString("en-IN")}
+              </p>
+              {state.currentBidTeam ? (
+                <div className="mt-1.5 pt-1.5 border-t border-slate-700/80 flex items-center justify-center gap-1.5">
+                  <span className="text-[11px] text-slate-300">Leading:</span>
+                  <span className="font-bold text-amber-300 text-xs truncate max-w-[170px]">
+                    🏆 {state.currentBidTeam.teamName}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-[11px] text-slate-400 mt-0.5">Waiting for opening bid…</p>
               )}
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-4">
+
+            <div className="grid grid-cols-2 gap-2 mt-3">
               <button
                 onClick={markSold}
-                disabled={busy}
-                className="btn-primary py-2.5 text-sm disabled:opacity-50 font-bold shadow-sm shadow-mint/20"
+                disabled={busy || !state.currentBidTeam}
+                className="btn-primary py-2 text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed font-bold shadow-xs"
+                title={!state.currentBidTeam ? "Place at least one bid before marking SOLD" : "Mark player as SOLD to highest bidder"}
               >
-                Mark SOLD
+                🔨 Mark SOLD
               </button>
               <button
                 onClick={markUnsold}
-                disabled={busy}
-                className="btn-danger py-2.5 text-sm disabled:opacity-50 font-bold shadow-sm shadow-rose/20"
+                disabled={
+                  busy ||
+                  !!state.currentBidTeam ||
+                  (state.currentBidHistory && state.currentBidHistory.length > 0)
+                }
+                className="btn-danger py-2 text-xs sm:text-sm disabled:opacity-40 disabled:cursor-not-allowed font-bold shadow-xs"
+                title={
+                  state.currentBidTeam || (state.currentBidHistory && state.currentBidHistory.length > 0)
+                    ? "Cannot mark unsold after bids have been placed. Mark SOLD or Undo Bid first."
+                    : "Mark cricketer as UNSOLD"
+                }
               >
-                Mark UNSOLD
+                🔴 Mark UNSOLD
               </button>
             </div>
             <button
@@ -861,74 +972,67 @@ export default function LiveAuction() {
                 !state.currentBidHistory ||
                 state.currentBidHistory.length === 0
               }
-              className="btn-secondary w-full mt-2 py-2 text-xs sm:text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              className="btn-secondary w-full mt-2 py-1.5 text-xs sm:text-sm disabled:opacity-40 disabled:cursor-not-allowed font-semibold"
             >
               ↩ Undo Last Bid
             </button>
+
             {queuePlayers.length > 0 && (
-              <p className="text-xs text-mauve-dark mt-3">
-                {queuePlayers.length} more player(s) queued in this category
+              <p className="text-[11px] text-slate-500 mt-2.5 font-medium">
+                {queuePlayers.length} more cricketer(s) queued in this category
               </p>
             )}
           </div>
 
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <div>
-              <h3 className="font-semibold text-sm sm:text-base mb-2.5">Place Bid For a Team</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 sm:gap-3">
+          <div className="lg:col-span-7 xl:col-span-8 space-y-4 sm:space-y-5">
+            <div className="card p-3.5 sm:p-4 border-slate-200">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-1.5">
+                  <span>🏏</span> Place Bid For a Franchise
+                  {onlineTeamIds.length > 0 && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full border border-blue-200 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse"></span>
+                      {onlineTeamIds.length} Online
+                    </span>
+                  )}
+                </h3>
+                <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                  {onlineTeamIds.length > 0
+                    ? "Online team owners bid directly"
+                    : "Click team paddle to place bid"}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-3.5 justify-items-center">
                 {teams
                   .filter((t) => t.isApproved)
-                  .map((t) => {
+                  .map((t, idx) => {
                     const isHighestBidder = state.currentBidTeam?._id === t._id;
                     const isPending = pendingTeamId === t._id;
-                    const hasPassed = state.passedTeams?.some(pt => (pt._id || pt).toString() === t._id.toString());
+                    const hasPassed = state.passedTeams?.some(
+                      (pt) => (pt._id || pt).toString() === t._id.toString()
+                    );
+                    const isTeamOnline = onlineTeamIds.some(
+                      (oid) => (oid?._id || oid)?.toString() === t._id?.toString()
+                    );
+                    const isPurseFinished =
+                      (t.purseRemaining || 0) <= 0 ||
+                      (nextBidAmount > 0 && (t.purseRemaining || 0) < nextBidAmount);
+                    const isBidDisabled =
+                      busy || isHighestBidder || isTeamOnline || isPurseFinished || !state.currentPlayer;
+
                     return (
-                      <button
+                      <CricketAuctionPaddle
                         key={t._id}
+                        team={t}
+                        index={idx}
+                        isHighestBidder={isHighestBidder}
+                        isPending={isPending}
+                        hasPassed={hasPassed}
+                        isTeamOnline={isTeamOnline}
+                        isPurseFinished={isPurseFinished}
+                        disabled={isBidDisabled}
                         onClick={() => placeBid(t._id)}
-                        disabled={busy || isHighestBidder}
-                        className={`card text-left border-2 transition-all duration-150 active:scale-95 active:bg-mint/20 p-3 sm:p-4 select-none
-                        disabled:cursor-not-allowed
-                        ${isHighestBidder ? "border-mint bg-mint/15 shadow-md ring-2 ring-mint/40" : "border-mauve/20 hover:border-mint hover:shadow-md"}
-                        ${hasPassed ? "bg-slate-100/70 border-slate-300 opacity-75" : ""}
-                        ${busy && !isHighestBidder ? "opacity-50" : ""}`}
-                      >
-                        <div className="flex items-center justify-between gap-1 mb-1.5 min-w-0">
-                          <div className="flex items-center gap-2 min-w-0">
-                            {t.teamLogoUrl ? (
-                              <img
-                                src={t.teamLogoUrl}
-                                className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0"
-                                alt=""
-                              />
-                            ) : (
-                              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-turf/10 text-turf flex items-center justify-center text-xs shrink-0">
-                                🏏
-                              </div>
-                            )}
-                            <p className="font-semibold text-xs sm:text-sm truncate">{t.teamName}</p>
-                          </div>
-                          {hasPassed && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-200 text-slate-600 font-semibold shrink-0">
-                              Passed
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] sm:text-xs text-mauve-dark truncate">
-                          Purse left: Rs.{" "}
-                          {t.purseRemaining.toLocaleString("en-IN")}
-                        </p>
-                        {isPending && (
-                          <p className="text-[11px] sm:text-xs text-mint-dark font-semibold mt-1.5 animate-pulse">
-                            Placing bid…
-                          </p>
-                        )}
-                        {isHighestBidder && !isPending && (
-                          <p className="text-[11px] sm:text-xs text-mint-dark font-bold mt-1.5 flex items-center gap-1">
-                            <span>✓</span> <span>Highest Bidder</span>
-                          </p>
-                        )}
-                      </button>
+                      />
                     );
                   })}
               </div>
@@ -940,30 +1044,30 @@ export default function LiveAuction() {
                 <button
                   type="button"
                   onClick={() => setActiveTab("commentary")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                     activeTab === "commentary"
-                      ? "bg-mint text-turf-dark shadow-sm font-extrabold"
-                      : "bg-black/10 text-turf hover:bg-black/15"
+                      ? "bg-[#0F5132] text-white shadow-xs"
+                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                   }`}
                 >
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                   </span>
-                  <span>📜 Live Commentary Stream</span>
+                  <span>📜 Cricket Match Commentary</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setActiveTab("bidHistory")}
-                  className={`px-4 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-1.5 ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
                     activeTab === "bidHistory"
-                      ? "bg-mint text-turf-dark shadow-sm font-extrabold"
-                      : "bg-black/10 text-turf hover:bg-black/15"
+                      ? "bg-[#0F5132] text-white shadow-xs"
+                      : "bg-slate-200 text-slate-700 hover:bg-slate-300"
                   }`}
                 >
-                  <span>⚡ Bid History</span>
-                  <span className="text-[10px] bg-black/10 px-2 py-0.5 rounded-full font-mono">
+                  <span>⚡ Bid Logs</span>
+                  <span className="text-[10px] bg-black/20 text-white px-2 py-0.5 rounded-full font-mono">
                     {state.currentBidHistory?.length || 0}
                   </span>
                 </button>
@@ -979,11 +1083,11 @@ export default function LiveAuction() {
                   />
                 </div>
               ) : (
-                <div className="card">
-                  <h3 className="font-semibold text-sm sm:text-base mb-2.5 flex items-center justify-between">
+                <div className="card border-slate-200">
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900 mb-2.5 flex items-center justify-between">
                     <span>Bid History — {currentPlayer.name}</span>
-                    <span className="text-xs text-gold-dark font-mono font-bold">
-                      {state.currentBidHistory?.length || 0} Bids
+                    <span className="text-xs text-amber-700 font-mono font-bold">
+                      {state.currentBidHistory?.length || 0} Bids Logged
                     </span>
                   </h3>
                   {state.currentBidHistory && state.currentBidHistory.length > 0 ? (
@@ -991,21 +1095,21 @@ export default function LiveAuction() {
                       {[...state.currentBidHistory].reverse().map((b, i) => (
                         <li
                           key={i}
-                          className={`flex justify-between items-center text-xs sm:text-sm px-3 py-2 rounded-lg transition-colors ${
-                            i === 0 ? "bg-gold/15 font-semibold border border-gold/30" : "bg-black/5"
+                          className={`flex justify-between items-center text-xs sm:text-sm px-3 py-2 rounded-xl transition-colors ${
+                            i === 0 ? "bg-amber-50 font-bold border border-amber-300 text-amber-950" : "bg-slate-50 text-slate-700"
                           }`}
                         >
                           <span className="truncate max-w-[65%]">
                             {state.currentBidHistory.length - i}.{" "}
-                            {b.team?.teamName || "Unknown Team"}
+                            {b.team?.teamName || "Unknown Franchise"}
                           </span>
-                          <span className="shrink-0 font-medium">Rs. {b.amount.toLocaleString("en-IN")}</span>
+                          <span className="shrink-0 font-bold">₹{b.amount.toLocaleString("en-IN")}</span>
                         </li>
                       ))}
                     </ol>
                   ) : (
-                    <p className="text-black/40 text-xs sm:text-sm py-3">
-                      No bids placed yet for this player.
+                    <p className="text-slate-400 text-xs sm:text-sm py-3">
+                      No bids placed yet for this cricketer.
                     </p>
                   )}
                 </div>

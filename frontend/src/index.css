@@ -7,51 +7,72 @@
 }
 
 html, body {
-  @apply bg-ivory text-turf font-body antialiased;
+  @apply bg-[#F8FAFC] text-slate-900 font-body antialiased;
   overflow-x: hidden;
   touch-action: manipulation;
 }
 
 .font-display {
-  font-family: 'Oswald', sans-serif;
-  letter-spacing: 0.02em;
+  font-family: 'Outfit', 'Oswald', sans-serif;
+  letter-spacing: -0.01em;
 }
 
+.font-scoreboard {
+  font-family: 'Oswald', 'Bebas Neue', sans-serif;
+  letter-spacing: 0.03em;
+}
+
+/* Authentic Human-Crafted Cricket Action Buttons */
 .btn-primary {
-  @apply inline-flex items-center justify-center bg-mint hover:bg-mint-dark active:bg-mint-dark text-turf-dark font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-md shadow-mint/30 hover:shadow-lg hover:shadow-mint/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
+  @apply inline-flex items-center justify-center bg-[#0F5132] hover:bg-[#0A3E26] active:bg-[#072F1C] text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-sm hover:shadow border border-[#0A3E26]/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
 }
 .btn-secondary {
-  @apply inline-flex items-center justify-center bg-white hover:bg-sky/20 active:bg-sky/30 text-turf font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 border border-mauve/40 hover:border-sky-dark disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center shadow-sm;
+  @apply inline-flex items-center justify-center bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-800 font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 border border-slate-300 hover:border-slate-400 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center shadow-sm;
 }
 .btn-danger {
-  @apply inline-flex items-center justify-center bg-rose hover:bg-rose-dark active:bg-rose-dark text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-md shadow-rose/25 hover:shadow-lg hover:shadow-rose/35 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
+  @apply inline-flex items-center justify-center bg-[#DC2626] hover:bg-[#B91C1C] active:bg-[#991B1B] text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-sm hover:shadow border border-[#991B1B]/40 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] select-none text-center;
 }
-.btn-orchid {
-  @apply inline-flex items-center justify-center bg-orchid hover:bg-orchid-dark active:bg-orchid-dark text-turf-dark font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-md shadow-orchid/25 active:scale-[0.98] select-none text-center;
+.btn-gold {
+  @apply inline-flex items-center justify-center bg-[#D97706] hover:bg-[#B45309] active:bg-[#92400E] text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-sm border border-[#B45309]/50 active:scale-[0.98] select-none text-center;
 }
-.btn-sky {
-  @apply inline-flex items-center justify-center bg-sky hover:bg-sky-dark active:bg-sky-dark text-turf-dark font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-md shadow-sky/25 active:scale-[0.98] select-none text-center;
+.btn-navy {
+  @apply inline-flex items-center justify-center bg-[#0B1E3D] hover:bg-[#07132B] active:bg-[#040C1A] text-white font-bold px-4 sm:px-5 py-2.5 rounded-xl transition-all duration-150 shadow-sm border border-[#1E3A5F] active:scale-[0.98] select-none text-center;
 }
 
+/* Handcrafted Clean Cards & Input Surfaces */
 .card {
-  @apply bg-white rounded-2xl shadow-sm border border-mauve/25 p-3.5 sm:p-5 hover:border-sky/60 transition-all duration-200;
+  @apply bg-white rounded-2xl shadow-sm border border-slate-200/90 p-4 sm:p-5 hover:border-slate-300 transition-all duration-200;
 }
 .input-field {
-  @apply w-full border border-mauve/35 rounded-xl px-3 py-2 text-sm bg-white text-turf focus:outline-none focus:ring-2 focus:ring-mint/50 focus:border-mint transition-colors;
+  @apply w-full border border-slate-300 rounded-xl px-3.5 py-2 text-sm bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F5132]/40 focus:border-[#0F5132] transition-colors shadow-sm;
 }
 .label-text {
-  @apply block text-xs sm:text-sm font-semibold text-turf/85 mb-1;
+  @apply block text-xs sm:text-sm font-semibold text-slate-700 mb-1;
 }
 
 .btn-save {
-  @apply inline-flex items-center justify-center gap-1 bg-mint/20 hover:bg-mint/30 border border-mint/40 text-turf-dark text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] select-none;
+  @apply inline-flex items-center justify-center gap-1 bg-[#0F5132]/10 hover:bg-[#0F5132]/20 border border-[#0F5132]/30 text-[#0F5132] text-xs font-bold px-2.5 sm:px-3 py-1.5 rounded-xl transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.97] select-none;
 }
 
 .badge-unsaved {
-  @apply inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-rose bg-rose/15 border border-rose/30 px-2.5 py-0.5 rounded-full shrink-0;
+  @apply inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-red-600 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full shrink-0;
 }
 
-/* Smooth touch scrolling for responsive tables & tickers */
+/* Cricket Role Badges */
+.badge-batsman {
+  @apply inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-300 px-2.5 py-0.5 rounded-lg text-xs font-bold;
+}
+.badge-bowler {
+  @apply inline-flex items-center gap-1 bg-blue-50 text-blue-900 border border-blue-300 px-2.5 py-0.5 rounded-lg text-xs font-bold;
+}
+.badge-allrounder {
+  @apply inline-flex items-center gap-1 bg-emerald-50 text-emerald-900 border border-emerald-300 px-2.5 py-0.5 rounded-lg text-xs font-bold;
+}
+.badge-keeper {
+  @apply inline-flex items-center gap-1 bg-purple-50 text-purple-900 border border-purple-300 px-2.5 py-0.5 rounded-lg text-xs font-bold;
+}
+
+/* Smooth touch scrolling */
 .scroll-touch {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
@@ -61,56 +82,25 @@ html, body {
   width: 6px;
 }
 .scroll-touch::-webkit-scrollbar-thumb {
-  background-color: rgba(193, 170, 192, 0.4);
+  background-color: rgba(148, 163, 184, 0.4);
   border-radius: 9999px;
 }
 .scroll-touch::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(193, 170, 192, 0.7);
+  background-color: rgba(100, 116, 139, 0.7);
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-@keyframes splashPop {
-  0% {
-    opacity: 0;
-    transform: scale(0.8);
-  }
 
-  60% {
-    opacity: 1;
-    transform: scale(1.05);
-  }
-
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes splashDot {
-  0%,
-  80%,
-  100% {
-    opacity: 0.3;
-    transform: scale(0.8);
-  }
-
-  40% {
-    opacity: 1;
-    transform: scale(1.15);
-  }
-}
-
-/* 3D Rubber Stamp Animations */
+/* Cricket Auction 3D Rubber Stamp Animations */
 @keyframes stampSlam {
   0% {
     opacity: 0;
@@ -189,37 +179,37 @@ html, body {
 }
 
 .stamp-sold-3d {
-  border: 6px solid #2CF6B3;
-  outline: 3px dashed rgba(44, 246, 179, 0.6);
+  border: 6px solid #15803D;
+  outline: 3px dashed rgba(21, 128, 61, 0.7);
   outline-offset: 4px;
-  color: #2CF6B3;
-  background: rgba(44, 246, 179, 0.15);
+  color: #15803D;
+  background: rgba(220, 252, 231, 0.95);
   box-shadow:
-    0 0 45px rgba(44, 246, 179, 0.5),
-    inset 0 0 25px rgba(44, 246, 179, 0.3),
-    0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    0 0 35px rgba(21, 128, 61, 0.4),
+    inset 0 0 20px rgba(21, 128, 61, 0.2),
+    0 20px 40px -10px rgba(0, 0, 0, 0.6);
   text-shadow:
-    3px 3px 0px #19131F,
-    0 0 25px rgba(44, 246, 179, 0.85);
+    2px 2px 0px #052e16,
+    0 0 15px rgba(21, 128, 61, 0.6);
 }
 
 .stamp-unsold-3d {
-  border: 6px solid #DE6C83;
-  outline: 3px dashed rgba(222, 108, 131, 0.6);
+  border: 6px solid #DC2626;
+  outline: 3px dashed rgba(220, 38, 38, 0.7);
   outline-offset: 4px;
-  color: #DE6C83;
-  background: rgba(222, 108, 131, 0.15);
+  color: #DC2626;
+  background: rgba(254, 226, 226, 0.95);
   box-shadow:
-    0 0 45px rgba(222, 108, 131, 0.5),
-    inset 0 0 25px rgba(222, 108, 131, 0.3),
-    0 25px 50px -12px rgba(0, 0, 0, 0.8);
+    0 0 35px rgba(220, 38, 38, 0.4),
+    inset 0 0 20px rgba(220, 38, 38, 0.2),
+    0 20px 40px -10px rgba(0, 0, 0, 0.6);
   text-shadow:
-    3px 3px 0px #19131F,
-    0 0 25px rgba(222, 108, 131, 0.85);
+    2px 2px 0px #450a0a,
+    0 0 15px rgba(220, 38, 38, 0.6);
 }
 
 /* =========================================================
-   BROADCAST STREAM OVERLAY ANIMATIONS & STYLES (OBS / VMIX)
+   CRICKET BROADCAST STREAM OVERLAY STYLES (OBS / VMIX)
    ========================================================= */
 
 @keyframes lowerThirdSlideUp {
@@ -251,15 +241,15 @@ html, body {
 @keyframes bidFlashPulse {
   0% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(44, 246, 179, 0.9);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.9);
   }
   40% {
-    transform: scale(1.08);
-    box-shadow: 0 0 40px 12px rgba(44, 246, 179, 0.6);
+    transform: scale(1.06);
+    box-shadow: 0 0 35px 10px rgba(217, 119, 6, 0.5);
   }
   100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 rgba(44, 246, 179, 0);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
   }
 }
 
@@ -290,15 +280,6 @@ html, body {
   }
 }
 
-@keyframes beamRotate {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
 .animate-lower-third {
   animation: lowerThirdSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -325,28 +306,23 @@ html, body {
   animation-play-state: paused;
 }
 
-/* Glassmorphic Broadcast Panel Surfaces */
+/* Stadium Broadcast Dark Glass Panels */
 .broadcast-glass-dark {
-  background: linear-gradient(135deg, rgba(25, 19, 31, 0.96) 0%, rgba(37, 28, 46, 0.97) 50%, rgba(18, 13, 23, 0.98) 100%);
+  background: linear-gradient(135deg, rgba(11, 30, 61, 0.97) 0%, rgba(7, 19, 43, 0.98) 100%);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1.5px solid rgba(44, 246, 179, 0.35);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(217, 119, 6, 0.4);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.broadcast-gold-glow,
+.broadcast-gold-glow {
+  text-shadow: 0 0 15px rgba(245, 158, 11, 0.8), 0 2px 4px rgba(0, 0, 0, 0.9);
+}
+
 .broadcast-mint-glow {
-  text-shadow: 0 0 20px rgba(44, 246, 179, 0.75), 0 2px 4px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 15px rgba(16, 185, 129, 0.8), 0 2px 4px rgba(0, 0, 0, 0.9);
 }
 
 .broadcast-rose-glow {
-  text-shadow: 0 0 20px rgba(222, 108, 131, 0.75), 0 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.broadcast-orchid-glow {
-  text-shadow: 0 0 20px rgba(236, 176, 225, 0.75), 0 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.broadcast-emerald-glow {
-  text-shadow: 0 0 20px rgba(44, 246, 179, 0.75), 0 2px 4px rgba(0, 0, 0, 0.8);
+  text-shadow: 0 0 15px rgba(220, 38, 38, 0.8), 0 2px 4px rgba(0, 0, 0, 0.9);
 }

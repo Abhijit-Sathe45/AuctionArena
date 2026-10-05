@@ -14,6 +14,8 @@ export default function TeamRegister() {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
   const [done, setDone] = useState(false);
+  const [uploadingOwnerPhoto, setUploadingOwnerPhoto] = useState(false);
+  const [uploadingTeamLogo, setUploadingTeamLogo] = useState(false);
 
   const [form, setForm] = useState({
     ownerName: '', teamName: '', ownerPlaysMatch: false,
@@ -30,6 +32,10 @@ export default function TeamRegister() {
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (uploadingOwnerPhoto || uploadingTeamLogo) {
+      setStatus({ type: 'info', message: 'Please wait, photo or team logo is still uploading...' });
+      return;
+    }
     setStatus({ type: '', message: '' });
     setSubmitting(true);
     try {
@@ -104,8 +110,17 @@ export default function TeamRegister() {
           <input className="input-field" value={form.phone} onChange={e => update('phone', e.target.value)} />
         </div>
 
-        <ImageUpload label="Your Photo" onUploaded={(url) => update('ownerPhotoUrl', url)} />
-        <ImageUpload label="Team Logo" onUploaded={(url) => update('teamLogoUrl', url)} />
+        <ImageUpload
+          label="Your Photo"
+          onUploaded={(url) => update('ownerPhotoUrl', url)}
+          onUploadingChange={setUploadingOwnerPhoto}
+        />
+        <ImageUpload
+          label="Team Logo"
+          shape="square"
+          onUploaded={(url) => update('teamLogoUrl', url)}
+          onUploadingChange={setUploadingTeamLogo}
+        />
 
         {info.teamRegistrationFee > 0 && (
           <p className="text-sm text-mint-dark font-bold bg-mint/15 border border-mint/30 px-3 py-2 rounded-xl text-center">
@@ -115,8 +130,18 @@ export default function TeamRegister() {
 
         <StatusMessage type={status.type} message={status.message} />
 
-        <button type="submit" disabled={submitting} className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25">
-          {submitting ? 'Processing…' : info.teamRegistrationFee > 0 ? `Pay Rs. ${info.teamRegistrationFee} & Register` : 'Register Team'}
+        <button
+          type="submit"
+          disabled={submitting || uploadingOwnerPhoto || uploadingTeamLogo}
+          className="btn-primary w-full text-base py-3 font-bold shadow-md shadow-mint/25 disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {submitting
+            ? 'Processing…'
+            : (uploadingOwnerPhoto || uploadingTeamLogo)
+            ? 'Uploading Images…'
+            : info.teamRegistrationFee > 0
+            ? `Pay Rs. ${info.teamRegistrationFee} & Register`
+            : 'Register Team'}
         </button>
       </form>
     </Center>
@@ -124,5 +149,5 @@ export default function TeamRegister() {
 }
 
 function Center({ children }) {
-  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-gradient-to-b from-sky/15 via-ivory to-orchid/10">{children}</div>;
+  return <div className="min-h-screen flex items-center justify-center p-3.5 sm:p-6 py-6 sm:py-10 bg-slate-900 text-slate-100">{children}</div>;
 }

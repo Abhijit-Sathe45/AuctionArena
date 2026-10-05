@@ -20,7 +20,10 @@ async function getTournamentInfo(req, res) {
     const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
     if (!organizer) return res.status(404).json({ message: 'Tournament not found or inactive' });
 
-    const settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    let settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    if (!settings) {
+      settings = await AuctionSettings.create({ organizer: organizer._id });
+    }
     const playerCount = await Player.countDocuments({ organizer: organizer._id, paymentStatus: { $in: ['PAID', 'FREE'] } });
     const teamCount = await Team.countDocuments({ organizer: organizer._id, paymentStatus: { $in: ['PAID', 'FREE'] } });
 
@@ -28,11 +31,14 @@ async function getTournamentInfo(req, res) {
       tournamentName: organizer.tournamentName,
       tournamentDate: organizer.tournamentDate,
       logoUrl: organizer.logoUrl,
-      playerRegistrationOpen: settings.playerRegistrationOpen && playerCount < settings.maxPlayers,
-      teamRegistrationOpen: settings.teamRegistrationOpen && teamCount < settings.maxTeams,
-      playerRegistrationFee: settings.playerRegistrationFee,
-      teamRegistrationFee: settings.teamRegistrationFee,
-      slotsLeft: { players: Math.max(settings.maxPlayers - playerCount, 0), teams: Math.max(settings.maxTeams - teamCount, 0) },
+      playerRegistrationOpen: !!settings.playerRegistrationOpen && playerCount < (settings.maxPlayers || 100),
+      teamRegistrationOpen: !!settings.teamRegistrationOpen && teamCount < (settings.maxTeams || 10),
+      playerRegistrationFee: settings.playerRegistrationFee || 0,
+      teamRegistrationFee: settings.teamRegistrationFee || 0,
+      slotsLeft: {
+        players: Math.max((settings.maxPlayers || 100) - playerCount, 0),
+        teams: Math.max((settings.maxTeams || 10) - teamCount, 0),
+      },
     });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
@@ -45,13 +51,16 @@ async function registerPlayer(req, res) {
     const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
     if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
 
-    const settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    let settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    if (!settings) {
+      settings = await AuctionSettings.create({ organizer: organizer._id });
+    }
     const playerCount = await Player.countDocuments({ organizer: organizer._id, paymentStatus: { $in: ['PAID', 'FREE'] } });
 
     if (!settings.playerRegistrationOpen) {
       return res.status(400).json({ message: 'Player registration is currently closed by the organizer.' });
     }
-    if (playerCount >= settings.maxPlayers) {
+    if (playerCount >= (settings.maxPlayers || 100)) {
       return res.status(400).json({ message: 'Player registration is full. No more slots available.' });
     }
 
@@ -60,11 +69,28 @@ async function registerPlayer(req, res) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
+    const validBowlingStyles = [
+      'RIGHT_ARM_FAST', 'RIGHT_ARM_MEDIUM', 'RIGHT_ARM_SPIN',
+      'LEFT_ARM_FAST', 'LEFT_ARM_MEDIUM', 'LEFT_ARM_SPIN',
+      'RIGHT_HANDED', 'LEFT_HANDED', 'NA'
+    ];
+    let sanitizedBowling = (bowlingStyle || 'NA').toString().trim().toUpperCase().replace(/\s+/g, '_');
+    if (!validBowlingStyles.includes(sanitizedBowling)) {
+      sanitizedBowling = 'NA';
+    }
+
     const fee = settings.playerRegistrationFee;
     const player = await Player.create({
-      organizer: organizer._id, name, battingStyle, bowlingStyle: bowlingStyle || 'NA',
-      playerType, age, photoUrl, phone,
-      registrationFeePaid: fee, paymentStatus: fee > 0 ? 'PENDING' : 'FREE',
+      organizer: organizer._id,
+      name: name.trim(),
+      battingStyle: ['RIGHT_HANDED', 'LEFT_HANDED'].includes(battingStyle) ? battingStyle : 'RIGHT_HANDED',
+      bowlingStyle: sanitizedBowling,
+      playerType,
+      age: Number(age),
+      photoUrl,
+      phone: phone ? phone.trim() : '',
+      registrationFeePaid: fee,
+      paymentStatus: fee > 0 ? 'PENDING' : 'FREE',
     });
 
     if (fee > 0) {
@@ -74,11 +100,13 @@ async function registerPlayer(req, res) {
       return res.json({ playerId: player._id, razorpayOrder: order, amount: fee });
     }
 
-
-res.json({ playerId: player._id, message: 'Registered successfully (no fee required).' });
+    res.json({ playerId: player._id, message: 'Registered successfully (no fee required).' });
     emitRegistrationUpdate(req, organizer._id, 'player');
   } catch (err) {
     console.error(err);
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ message: err.message });
+    }
     res.status(500).json({ message: 'Server error registering player' });
   }
 }
@@ -112,25 +140,29 @@ async function registerTeam(req, res) {
     const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
     if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
 
-    const settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    let settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    if (!settings) {
+      settings = await AuctionSettings.create({ organizer: organizer._id });
+    }
     const teamCount = await Team.countDocuments({ organizer: organizer._id, paymentStatus: { $in: ['PAID', 'FREE'] } });
 
     if (!settings.teamRegistrationOpen) {
       return res.status(400).json({ message: 'Team registration is currently closed by the organizer.' });
     }
-    if (teamCount >= settings.maxTeams) {
+    if (teamCount >= (settings.maxTeams || 10)) {
       return res.status(400).json({ message: 'Team registration is full. No more slots available.' });
     }
 
     const { ownerName, teamName, ownerPlaysMatch, ownerPhotoUrl, teamLogoUrl, phone } = req.body;
     if (!ownerName || !teamName) return res.status(400).json({ message: 'Missing required fields' });
 
-    const fee = settings.teamRegistrationFee;
+    const fee = settings.teamRegistrationFee || 0;
+    const purse = settings.maxPursePerTeam || 10000;
     const team = await Team.create({
       organizer: organizer._id, ownerName, teamName,
       ownerPlaysMatch: !!ownerPlaysMatch, ownerPhotoUrl, teamLogoUrl, phone,
       registrationFeePaid: fee, paymentStatus: fee > 0 ? 'PENDING' : 'FREE',
-      totalPurse: settings.maxPursePerTeam, purseRemaining: settings.maxPursePerTeam,
+      totalPurse: purse, purseRemaining: purse,
     });
 
     if (fee > 0) {
@@ -344,7 +376,83 @@ async function getTeamRemoteState(req, res) {
   }
 }
 
+// POST /api/public/:slug/team-bid -> places a bid from a team owner remote
+async function teamBid(req, res) {
+  try {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No authorization token' });
+    }
+
+    const jwt = require('jsonwebtoken');
+    const { JWT_SECRET } = require('../config');
+    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
+
+    if (decoded.role !== 'TEAM_OWNER' || !decoded.teamId) {
+      return res.status(403).json({ message: 'Invalid token for team remote' });
+    }
+
+    const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
+    if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
+
+    const settings = await AuctionSettings.findOne({ organizer: organizer._id });
+    if (!settings?.teamOwnerBiddingEnabled) {
+      return res.status(403).json({ message: 'Team owner remote bidding is currently disabled by the organizer.' });
+    }
+
+    const auctionService = require('../services/auctionService');
+    const state = await auctionService.placeBid(organizer._id, decoded.teamId, { isOrganizer: false });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`auction-${organizer._id}`).emit('auction-update', { event: 'BID_PLACED', state });
+    }
+
+    return getTeamRemoteState(req, res);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Bid failed' });
+  }
+}
+
+// POST /api/public/:slug/team-pass -> records a pass from a team owner remote
+async function teamPass(req, res) {
+  try {
+    const header = req.headers.authorization;
+    if (!header || !header.startsWith('Bearer ')) {
+      return res.status(401).json({ message: 'No authorization token' });
+    }
+
+    const jwt = require('jsonwebtoken');
+    const { JWT_SECRET } = require('../config');
+    const decoded = jwt.verify(header.split(' ')[1], JWT_SECRET);
+
+    if (decoded.role !== 'TEAM_OWNER' || !decoded.teamId) {
+      return res.status(403).json({ message: 'Invalid token for team remote' });
+    }
+
+    const organizer = await Organizer.findOne({ slug: req.params.slug, isActive: true });
+    if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
+
+    const auctionService = require('../services/auctionService');
+    const state = await AuctionState.findOneAndUpdate(
+      { organizer: organizer._id },
+      { $addToSet: { passedTeams: decoded.teamId } },
+      { new: true }
+    ).populate(auctionService.POPULATE_PATH);
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`auction-${organizer._id}`).emit('auction-update', { event: 'TEAM_PASSED', state, teamId: decoded.teamId });
+    }
+
+    return getTeamRemoteState(req, res);
+  } catch (err) {
+    res.status(400).json({ message: err.message || 'Pass action failed' });
+  }
+}
+
 module.exports = {
   getTournamentInfo, registerPlayer, verifyPlayerPayment, registerTeam, verifyTeamPayment,
   getLiveAuctionSpectatorView, getTeamsListForRemote, teamLogin, getTeamRemoteState,
+  teamBid, teamPass,
 };

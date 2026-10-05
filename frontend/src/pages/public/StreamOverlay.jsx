@@ -3,6 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
 import { getSocket } from "../../socket";
 import PlayerPhoto from "../../components/PlayerPhoto";
+import PlayerAuctionPlaque from "../../components/PlayerAuctionPlaque";
 import { playBidSound, playSoldSound, playUnsoldSound } from "../../utils/sounds";
 
 export default function StreamOverlay() {
@@ -44,49 +45,53 @@ export default function StreamOverlay() {
     }
   };
 
-  // Color theme palettes
+  // Cricket Broadcast Color theme palettes
   const getThemeColors = () => {
     switch (theme) {
-      case "orchid":
+      case "gold":
+      case "iplGold":
         return {
-          primary: "#ECB0E1",
-          primaryDark: "#D694CA",
-          accent: "#F7D6F1",
-          border: "border-orchid/50",
-          glow: "rgba(236, 176, 225, 0.7)",
-          badgeBg: "bg-orchid/20 text-orchid border-orchid/40",
+          primary: "#D97706",
+          primaryDark: "#B45309",
+          accent: "#FDE68A",
+          border: "border-amber-500/50",
+          glow: "rgba(217, 119, 6, 0.7)",
+          badgeBg: "bg-amber-500/20 text-amber-300 border-amber-500/40",
         };
+      case "cherry":
       case "rose":
       case "crimson":
         return {
-          primary: "#DE6C83",
-          primaryDark: "#C4546B",
-          accent: "#EAA1B1",
-          border: "border-rose/50",
-          glow: "rgba(222, 108, 131, 0.7)",
-          badgeBg: "bg-rose/20 text-rose border-rose/40",
+          primary: "#DC2626",
+          primaryDark: "#B91C1C",
+          accent: "#FCA5A5",
+          border: "border-red-600/50",
+          glow: "rgba(220, 38, 38, 0.7)",
+          badgeBg: "bg-red-600/20 text-red-300 border-red-500/40",
         };
+      case "navy":
+      case "stadium":
       case "sky":
       case "cyber":
         return {
-          primary: "#C9DDFF",
-          primaryDark: "#A4C5FA",
-          accent: "#EAF2FF",
-          border: "border-sky/50",
-          glow: "rgba(201, 221, 255, 0.7)",
-          badgeBg: "bg-sky/20 text-sky border-sky/40",
+          primary: "#2563EB",
+          primaryDark: "#1D4ED8",
+          accent: "#93C5FD",
+          border: "border-blue-500/50",
+          glow: "rgba(37, 99, 235, 0.7)",
+          badgeBg: "bg-blue-600/20 text-blue-300 border-blue-500/40",
         };
+      case "turf":
       case "emerald":
-      case "gold":
       case "mint":
       default:
         return {
-          primary: "#2CF6B3",
-          primaryDark: "#1EC990",
-          accent: "#67F9C6",
-          border: "border-mint/50",
-          glow: "rgba(44, 246, 179, 0.7)",
-          badgeBg: "bg-mint/20 text-mint border-mint/40",
+          primary: "#10B981",
+          primaryDark: "#059669",
+          accent: "#6EE7B7",
+          border: "border-emerald-500/50",
+          glow: "rgba(16, 185, 129, 0.7)",
+          badgeBg: "bg-emerald-600/20 text-emerald-300 border-emerald-500/40",
         };
     }
   };
@@ -372,14 +377,15 @@ export default function StreamOverlay() {
                   )}
                 </div>
 
-                <div className="mt-1">
-                  <h2 className="font-display text-2xl text-white tracking-wide uppercase leading-tight">
-                    {currentPlayer.name}
-                  </h2>
-                  <div className="text-xs font-semibold text-amber-300/90 mt-0.5">
-                    {currentPlayer.playerType} • {currentPlayer.battingStyle || "Batsman"}
-                  </div>
-                  <div className="text-xs text-gray-400 mt-0.5">
+                <div className="w-full mt-1">
+                  <PlayerAuctionPlaque
+                    name={currentPlayer.name}
+                    lotNumber={currentPlayer.lotNumber || currentPlayer.jerseyNumber || "01"}
+                    role={currentPlayer.playerType}
+                    league="IPL"
+                    variant="compact"
+                  />
+                  <div className="text-xs text-gray-400 mt-1">
                     Base Price: <span className="text-white font-bold">₹{formatAmount(currentPlayer.basePrice)}</span>
                   </div>
                 </div>
@@ -417,6 +423,144 @@ export default function StreamOverlay() {
                     />
                   ) : (
                     <div className="w-10 h-10 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center font-display text-amber-300 text-lg font-bold shrink-0">
+                      {currentBidTeam.teamName?.[0]}
+                    </div>
+                  )}
+                  <div className="overflow-hidden">
+                    <div className="font-display text-lg text-white truncate leading-tight">
+                      {currentBidTeam.teamName}
+                    </div>
+                    {currentBidTeam.ownerName && (
+                      <div className="text-xs text-gray-400 truncate">Owner: {currentBidTeam.ownerName}</div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-400 mt-2 italic">Awaiting first bid from teams...</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* 2B. PLAYER CARD SPOTLIGHT MODE (Large Player Profile)     */}
+      {/* ========================================================= */}
+      {(mode === "card" || mode === "spotlight") && (
+        <div className="absolute left-8 top-12 bottom-16 w-[420px] max-w-[90vw] flex flex-col justify-center animate-sidebar-slide z-30 pointer-events-none">
+          <div className="broadcast-glass-dark rounded-3xl p-6 border-2 border-amber-400/50 shadow-[0_0_50px_rgba(217,119,6,0.25)] flex flex-col gap-4 overflow-hidden relative">
+            {/* Header / Brand */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                {data?.logoUrl ? (
+                  <img src={data.logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-display text-slate-950 font-black text-xl shadow">
+                    🏆
+                  </div>
+                )}
+                <div>
+                  <span className="inline-block bg-red-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider animate-pulse mb-0.5">
+                    LIVE AUCTION
+                  </span>
+                  <div className="font-display text-base text-white tracking-wide truncate max-w-[200px]">
+                    {data?.tournamentName}
+                  </div>
+                </div>
+              </div>
+
+              {timeLeft !== null && (
+                <div
+                  className={`w-12 h-12 rounded-2xl border-2 flex flex-col items-center justify-center font-display leading-none shrink-0 ${
+                    timeLeft <= 4
+                      ? "bg-red-600/30 border-red-500 text-red-400 animate-timer-heartbeat"
+                      : timeLeft <= 10
+                      ? "bg-amber-500/20 border-amber-400 text-amber-300"
+                      : "bg-emerald-500/20 border-emerald-400 text-emerald-300"
+                  }`}
+                >
+                  <span className="text-xl font-black">{timeLeft}</span>
+                  <span className="text-[8px] uppercase font-bold opacity-75">SEC</span>
+                </div>
+              )}
+            </div>
+
+            {/* Giant Player Photo & Profile */}
+            {currentPlayer ? (
+              <div className="flex flex-col items-center text-center gap-3.5 bg-black/50 rounded-2xl p-4 border border-white/10">
+                <div className="relative">
+                  <div className="w-40 h-40 sm:w-48 sm:h-48 rounded-3xl overflow-hidden border-4 border-amber-400 shadow-[0_0_30px_rgba(245,158,11,0.35)] bg-black/60 relative">
+                    <PlayerPhoto photoUrl={currentPlayer.photoUrl} name={currentPlayer.name} className="w-full h-full object-cover" />
+                  </div>
+                  {currentCategory && (
+                    <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-amber-400 text-slate-950 text-xs font-black px-3.5 py-0.5 rounded-full uppercase tracking-wider shadow-lg whitespace-nowrap">
+                      {currentCategory.name}
+                    </span>
+                  )}
+                  {currentPlayer.lotNumber && (
+                    <span className="absolute -top-2 -left-2 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-black text-xs px-2.5 py-0.5 rounded-lg shadow uppercase tracking-tight font-mono border border-white/40">
+                      LOT #{currentPlayer.lotNumber}
+                    </span>
+                  )}
+                </div>
+
+                <div className="w-full mt-2">
+                  <h3 className="font-display text-2xl sm:text-3xl text-white uppercase tracking-wider font-black leading-tight drop-shadow">
+                    {currentPlayer.name}
+                  </h3>
+                  <div className="flex items-center justify-center gap-2 mt-1.5 flex-wrap">
+                    <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold px-2.5 py-0.5 rounded-md uppercase">
+                      {currentPlayer.playerType}
+                    </span>
+                    {currentPlayer.battingStyle && currentPlayer.battingStyle !== "NA" && (
+                      <span className="text-gray-300 text-xs font-medium">
+                        Bat: {currentPlayer.battingStyle}
+                      </span>
+                    )}
+                    {currentPlayer.bowlingStyle && currentPlayer.bowlingStyle !== "NA" && (
+                      <span className="text-gray-300 text-xs font-medium">
+                        • Bowl: {currentPlayer.bowlingStyle}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-2">
+                    Base Price: <span className="text-amber-300 font-bold text-sm">₹{formatAmount(currentPlayer.basePrice)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-gray-400 font-display text-lg">
+                READY FOR NEXT PLAYER
+              </div>
+            )}
+
+            {/* Live Bidding Box */}
+            <div
+              className={`rounded-2xl p-4 bg-gradient-to-br from-amber-500/20 via-black/60 to-black/80 border-2 ${
+                bidPulse ? "border-amber-400 animate-bid-pulse scale-102" : "border-amber-400/40"
+              } transition-all shadow-xl`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-amber-300 mb-1">
+                <span>Current Highest Bid</span>
+                <span className="text-[10px] bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-400/30">
+                  {state?.currentBidHistory?.length || 0} Bids Placed
+                </span>
+              </div>
+
+              <div className="font-display text-4xl text-amber-400 font-black tracking-tight my-1">
+                ₹{formatAmount(currentBidAmount || currentPlayer?.basePrice || 0)}
+              </div>
+
+              {currentBidTeam ? (
+                <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/10">
+                  {currentBidTeam.teamLogoUrl ? (
+                    <img
+                      src={currentBidTeam.teamLogoUrl}
+                      alt={currentBidTeam.teamName}
+                      className="w-11 h-11 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shrink-0"
+                    />
+                  ) : (
+                    <div className="w-11 h-11 rounded-xl bg-amber-400/20 border border-amber-400/40 flex items-center justify-center font-display text-amber-300 text-xl font-bold shrink-0">
                       {currentBidTeam.teamName?.[0]}
                     </div>
                   )}
@@ -479,9 +623,14 @@ export default function StreamOverlay() {
               {currentPlayer ? (
                 <>
                   <div className="relative shrink-0">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-xl bg-black/60">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border-2 border-amber-400 shadow-2xl bg-black/60 relative">
                       <PlayerPhoto photoUrl={currentPlayer.photoUrl} name={currentPlayer.name} className="w-full h-full object-cover" />
                     </div>
+                    {currentPlayer.lotNumber && (
+                      <span className="absolute -top-1.5 -left-1.5 bg-amber-400 text-slate-950 font-black text-[9px] px-1.5 py-0.2 rounded-md shadow uppercase tracking-tight font-mono">
+                        #{currentPlayer.lotNumber}
+                      </span>
+                    )}
                   </div>
 
                   <div className="overflow-hidden">

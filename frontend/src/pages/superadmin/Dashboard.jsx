@@ -99,7 +99,7 @@ export default function SuperAdminDashboard() {
 
   async function deleteOrganizer(organizer) {
     const confirmation = prompt(
-      `This will PERMANENTLY delete "${organizer.tournamentName}" along with every registered player, team, category, and the full auction history. This cannot be undone.\n\nType the tournament name exactly to confirm:`,
+      `This will PERMANENTLY delete "${organizer.tournamentName}" along with all uploaded images (Cloudinary), registered players, teams, categories, and auction history. This cannot be undone.\n\nType the tournament name exactly to confirm:`,
     );
     if (confirmation !== organizer.tournamentName) {
       if (confirmation !== null)
@@ -213,9 +213,7 @@ export default function SuperAdminDashboard() {
       <div className="card overflow-x-auto scroll-touch shadow-sm border-mauve/20">
         <h2 className="font-semibold text-sm sm:text-base mb-1 text-turf">Organizers</h2>
         <p className="text-xs text-mauve-dark mb-3">
-          An organizer must be suspended before they can be permanently deleted
-          — this is a safety gate against accidentally wiping an active
-          tournament's data.
+          Manage organizer accounts. Deleting an organizer permanently removes all registered players, teams, auction logs, and all uploaded photos/logos from Cloudinary.
         </p>
         <table className="w-full text-xs sm:text-sm min-w-[680px]">
           <thead>
@@ -269,19 +267,18 @@ export default function SuperAdminDashboard() {
                     ) : (
                       <button
                         onClick={() => suspend(o._id)}
-                        className="text-rose text-xs font-semibold hover:underline px-1.5 py-1"
+                        className="text-amber-700 text-xs font-semibold hover:underline px-1.5 py-1"
                       >
                         Suspend
                       </button>
                     )}
-                    {o.status === "SUSPENDED" && (
-                      <button
-                        onClick={() => deleteOrganizer(o)}
-                        className="text-rose text-xs font-bold hover:underline px-1.5 py-1"
-                      >
-                        🗑 Delete
-                      </button>
-                    )}
+                    <button
+                      onClick={() => deleteOrganizer(o)}
+                      className="text-rose text-xs font-bold hover:underline px-1.5 py-1"
+                      title="Permanently delete organizer and all Cloudinary images"
+                    >
+                      🗑 Delete
+                    </button>
                   </div>
                 </td>
               </tr>

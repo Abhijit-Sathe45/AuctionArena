@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import api from "../api/axios";
 import PlayerPhoto from "./PlayerPhoto";
+import TeamLogo from "./TeamLogo";
 
 /**
  * Modern, high-performance Live Auction Analytics & Leaderboard Widget.
@@ -263,17 +264,11 @@ export default function AuctionAnalyticsWidget({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
-                      {team.teamLogoUrl ? (
-                        <img
-                          src={team.teamLogoUrl}
-                          alt=""
-                          className="w-7 h-7 rounded-full object-cover border border-sky/30 shrink-0"
-                        />
-                      ) : (
-                        <span className="w-7 h-7 rounded-full bg-mint/20 text-mint-dark flex items-center justify-center font-bold text-xs shrink-0">
-                          🏏
-                        </span>
-                      )}
+                      <TeamLogo
+                        src={team.teamLogoUrl}
+                        teamName={team.name}
+                        className="w-7 h-7"
+                      />
                       <div className="truncate">
                         <h4 className="font-bold text-xs sm:text-sm text-turf truncate">
                           {team.teamName}

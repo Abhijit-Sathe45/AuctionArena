@@ -14,8 +14,8 @@ const storage = new CloudinaryStorage({
   cloudinary,
   params: {
     folder: 'tennis-auction',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 800, height: 800, crop: 'limit' }],
+    resource_type: 'image',
+    transformation: [{ width: 1200, height: 1200, crop: 'limit', quality: 'auto' }],
   },
 });
 
@@ -26,7 +26,24 @@ const localStorage = multer.diskStorage({
 
 const useCloudinary = !!(CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET);
 
-const upload = multer({ storage: useCloudinary ? storage : localStorage });
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype && file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    const ext = require('path').extname(file.originalname).toLowerCase();
+    if (['.jpg', '.jpeg', '.png', '.webp', '.gif', '.jfif', '.heic', '.avif'].includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files (JPG, PNG, WEBP, etc.) are allowed!'), false);
+    }
+  }
+};
+
+const upload = multer({
+  storage: useCloudinary ? storage : localStorage,
+  fileFilter,
+  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+});
 
 module.exports = upload;
 module.exports.useCloudinary = useCloudinary;

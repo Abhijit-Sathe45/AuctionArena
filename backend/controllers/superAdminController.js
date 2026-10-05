@@ -7,6 +7,7 @@ const ExtraPointSet = require('../models/ExtraPointSet');
 const AuctionSettings = require('../models/AuctionSettings');
 const AuctionState = require('../models/AuctionState');
 const AuctionLog = require('../models/AuctionLog');
+const { deleteImages } = require('../utils/cloudinaryCleanup');
 
 // ---------- PRICING PLANS ----------
 async function listPricingPlans(req, res) {
@@ -63,22 +64,47 @@ async function extendPass(req, res) {
 }
 
 // DELETE /api/super-admin/organizers/:id
-// Permanently deletes a SUSPENDED organizer and every piece of data that belongs to them
-// (players, teams, categories, extra point sets, auction settings/state, and the full auction
-// history log). Only allowed while suspended — an organizer must be suspended first, as a
-// deliberate two-step safety gate against accidentally wiping an active tournament's data.
+// Permanently deletes an organizer and every piece of data that belongs to them
+// (players, teams, categories, extra point sets, auction settings/state, auction
+// history log, and all uploaded images from Cloudinary).
 async function deleteOrganizer(req, res) {
   const organizer = await Organizer.findById(req.params.id);
   if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
 
-  if (organizer.status !== 'SUSPENDED') {
-    return res.status(400).json({
-      message: 'Only suspended organizers can be deleted. Suspend this organizer first, then delete.',
-    });
-  }
-
   const organizerId = organizer._id;
 
+  // 1. Gather all image URLs belonging to this tournament (logo, players, team logos/photos)
+  const [players, teams] = await Promise.all([
+    Player.find({ organizer: organizerId }).select('photoUrl'),
+    Team.find({ organizer: organizerId }).select('ownerPhotoUrl teamLogoUrl logoUrl'),
+  ]);
+
+  const imageUrls = [];
+  if (organizer.logoUrl) imageUrls.push(organizer.logoUrl);
+  players.forEach((p) => {
+    if (p.photoUrl) imageUrls.push(p.photoUrl);
+  });
+  teams.forEach((t) => {
+    if (t.ownerPhotoUrl) imageUrls.push(t.ownerPhotoUrl);
+    if (t.teamLogoUrl) imageUrls.push(t.teamLogoUrl);
+    if (t.logoUrl) imageUrls.push(t.logoUrl);
+  });
+
+  const uniqueImageUrls = [...new Set(imageUrls.filter(Boolean))];
+
+  // 2. Permanently delete all associated images from Cloudinary & local storage
+  let deletedImagesCount = 0;
+  if (uniqueImageUrls.length > 0) {
+    try {
+      const cleanupResult = await deleteImages(uniqueImageUrls);
+      deletedImagesCount = cleanupResult.deletedCount || 0;
+      console.log(`[Cloudinary Cleanup] Deleted ${deletedImagesCount} images for tournament "${organizer.tournamentName}"`);
+    } catch (err) {
+      console.error('Error cleaning up tournament images from Cloudinary:', err);
+    }
+  }
+
+  // 3. Delete all database records belonging to this organizer
   await Promise.all([
     Player.deleteMany({ organizer: organizerId }),
     Team.deleteMany({ organizer: organizerId }),
@@ -91,7 +117,10 @@ async function deleteOrganizer(req, res) {
 
   await Organizer.deleteOne({ _id: organizerId });
 
-  res.json({ message: `${organizer.tournamentName} and all associated players, teams, and auction data have been permanently deleted.` });
+  res.json({
+    message: `${organizer.tournamentName}, all associated players, teams, auction data, and ${deletedImagesCount} image(s) have been permanently deleted.`,
+    deletedImagesCount,
+  });
 }
 
 module.exports = {
