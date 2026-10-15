@@ -331,10 +331,11 @@ async function getTeamRemoteState(req, res) {
     if (!organizer) return res.status(404).json({ message: 'Tournament not found' });
 
     const [settings, state, team, squadCount] = await Promise.all([
-      AuctionSettings.findOne({ organizer: organizer._id }),
+      AuctionSettings.findOne({ organizer: organizer._id }).select('minPlayersPerTeam maxPlayersPerTeam teamOwnerBiddingEnabled').lean(),
       AuctionState.findOne({ organizer: organizer._id })
-        .populate('currentPlayer currentBidTeam currentCategory passedTeams'),
-      Team.findById(decoded.teamId),
+        .populate('currentPlayer currentBidTeam currentCategory passedTeams')
+        .lean(),
+      Team.findById(decoded.teamId).select('_id teamName teamLogoUrl ownerName totalPurse purseRemaining').lean(),
       Player.countDocuments({ organizer: organizer._id, soldTo: decoded.teamId }),
     ]);
 
@@ -401,7 +402,11 @@ async function teamBid(req, res) {
     }
 
     const auctionService = require('../services/auctionService');
-    const state = await auctionService.placeBid(organizer._id, decoded.teamId, { isOrganizer: false });
+    const { expectedBidAmount } = req.body || {};
+    const state = await auctionService.placeBid(organizer._id, decoded.teamId, {
+      isOrganizer: false,
+      expectedBidAmount,
+    });
 
     const io = req.app.get('io');
     if (io) {

@@ -86,12 +86,32 @@ export default function TeamBidRemote() {
     }
 
     function handleAuctionUpdate(payload) {
-      if (payload?.event === "BID_PLACED" || payload?.event === "BID_UNDONE" || payload?.event === "TEAM_PASSED") {
-        loadRemoteState();
-        if (payload?.event === "BID_PLACED") {
-          playBidSound();
-        }
-      } else {
+      if (!payload) return;
+
+      // Fast-path: Update state directly from WebSocket broadcast payload
+      if (payload.state) {
+        setRemoteData((prev) => {
+          if (!prev) return prev;
+          const myTeamId = session?.team?._id || prev.team?._id;
+          const currentBidTeamId = payload.state.currentBidTeam?._id || payload.state.currentBidTeam;
+          const isHighest = myTeamId && currentBidTeamId && String(currentBidTeamId) === String(myTeamId);
+          const hasPassed = Array.isArray(payload.state.passedTeams) &&
+            payload.state.passedTeams.some((t) => String(t?._id || t) === String(myTeamId));
+
+          return {
+            ...prev,
+            state: payload.state,
+            isHighestBidder: Boolean(isHighest),
+            hasPassed: Boolean(hasPassed),
+            serverTime: Date.now(),
+          };
+        });
+      }
+
+      if (payload.event === "BID_PLACED") {
+        playBidSound();
+      } else if (payload.event === "PLAYER_CHANGED" || payload.event === "AUCTION_RESET" || payload.event === "PLAYER_SOLD") {
+        // Only run full HTTP refresh on major lifecycle milestones (player changed/sold)
         loadRemoteState();
       }
     }
@@ -193,7 +213,10 @@ export default function TeamBidRemote() {
     try {
       try {
         // Fast-path WebSocket execution
-        const res = await emitWithAck("auction:team-bid", { token: session.token });
+        const res = await emitWithAck("auction:team-bid", {
+          token: session.token,
+          expectedBidAmount: nextBid,
+        });
         if (res?.ok) {
           playBidSound();
           await loadRemoteState();
@@ -209,7 +232,7 @@ export default function TeamBidRemote() {
         // Fallback to HTTP REST endpoint
         const { data } = await api.post(
           `/public/${slug}/team-bid`,
-          {},
+          { expectedBidAmount: nextBid },
           { headers: { Authorization: `Bearer ${session.token}` } }
         );
         setRemoteData(data);

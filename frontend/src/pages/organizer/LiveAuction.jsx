@@ -220,6 +220,9 @@ export default function LiveAuction() {
               payload.finalPrice || payload.player?.soldPrice,
               lastBidCountRef.current
             );
+            if (payload.isRtm && soldItem) {
+              soldItem.text = `⚡ RIGHT TO MATCH EXERCISED! ${payload.team?.teamName || "Defending franchise"} matches the winning bid of ₹${(payload.finalPrice || 0).toLocaleString("en-IN")} to retain ${payload.player?.name}!`;
+            }
             if (soldItem) setCommentaryItems((prev) => [soldItem, ...prev]);
           }
           break;
@@ -346,7 +349,7 @@ export default function LiveAuction() {
   // Used for bid/undo — tries the WebSocket fast path first (skips a full HTTP round trip,
   // which matters most during a fast back-and-forth bidding war), and transparently falls
   // back to the regular REST endpoint if the socket isn't connected or doesn't answer in time.
-  async function callActionFast(socketEvent, socketPayload, restFn) {
+  async function callActionFast(socketEvent, socketPayload, restFn, throwError = false) {
     unlockAudio();
     setStatus({ type: "", message: "" });
     try {
@@ -368,6 +371,7 @@ export default function LiveAuction() {
         if (data) setState(data);
       }
     } catch (err) {
+      if (throwError) throw err;
       setStatus({ type: "error", message: describeError(err) });
     }
   }
@@ -393,6 +397,8 @@ export default function LiveAuction() {
       showToast("Player order shuffled.", "info");
     }
   }
+  const [paddleError, setPaddleError] = useState(null); // { teamId, message }
+
   const nextPlayer = (playerId) =>
     callAction(() =>
       api.post("/auction/next-player", playerId ? { playerId } : {}),
@@ -416,10 +422,21 @@ export default function LiveAuction() {
       }
     }
     setPendingTeamId(teamId);
+    setPaddleError(null);
     try {
       await callActionFast("auction:bid", { teamId }, () =>
         api.post("/auction/bid", { teamId }),
+        true
       );
+    } catch (err) {
+      const errMsg = describeError(err);
+      if (errMsg === 'ONE_PLAYER_PER_CATEGORY_LIMIT') {
+        setPaddleError({ teamId, message: "you already buy one player" });
+        // Clear paddle error after 3 seconds
+        setTimeout(() => setPaddleError(null), 3000);
+      } else {
+        setStatus({ type: "error", message: errMsg });
+      }
     } finally {
       setPendingTeamId(null);
     }
@@ -457,6 +474,19 @@ export default function LiveAuction() {
         player: res.data.player,
         team: res.data.team,
         finalPrice: res.data.player?.soldPrice,
+      });
+    }
+  }
+  async function useRtm() {
+    const res = await callAction(() => api.post("/auction/rtm"));
+    if (res?.data?.player) {
+      showToast(res.data.message || "RTM card exercised successfully!", "success");
+      setStampData({
+        result: "SOLD",
+        player: res.data.player,
+        team: res.data.team,
+        finalPrice: res.data.player?.soldPrice,
+        isRtm: true,
       });
     }
   }
@@ -965,6 +995,46 @@ export default function LiveAuction() {
                 🔴 Mark UNSOLD
               </button>
             </div>
+
+            {/* RTM (Right to Match) Action */}
+            {settings?.rtmEnabled && currentPlayer?.previousTeam && (
+              (() => {
+                const prevTeamId = currentPlayer.previousTeam?._id || currentPlayer.previousTeam;
+                const defendingTeam = teams.find((t) => (t._id || t).toString() === prevTeamId.toString());
+                const rtmLimit = settings.rtmCardsPerTeam || 2;
+                const cardsUsed = defendingTeam?.rtmCardsUsed || 0;
+                const cardsRemaining = Math.max(0, rtmLimit - cardsUsed);
+                const isLeading = state.currentBidTeam && (state.currentBidTeam._id || state.currentBidTeam).toString() === prevTeamId.toString();
+                const canUseRtm = !!state.currentBidTeam && !isLeading && cardsRemaining > 0 && (defendingTeam?.purseRemaining || 0) >= state.currentBidAmount;
+
+                return (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-left">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="font-bold text-amber-900 flex items-center gap-1">
+                        <span>🛡️</span> RTM Card: {defendingTeam?.teamName || "Defending Franchise"}
+                      </span>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                        {cardsRemaining} Left
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={useRtm}
+                      disabled={busy || !canUseRtm}
+                      className="w-full py-1.5 px-3 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold shadow-xs transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
+                    >
+                      <span>⚡</span>
+                      <span>
+                        {isLeading
+                          ? "Defending Team Already Leading"
+                          : `Use RTM for ${defendingTeam?.teamName || "Defending Team"} (₹${state.currentBidAmount.toLocaleString("en-IN")})`}
+                      </span>
+                    </button>
+                  </div>
+                );
+              })()
+            )}
+
             <button
               onClick={undoBid}
               disabled={
@@ -1031,6 +1101,7 @@ export default function LiveAuction() {
                         isTeamOnline={isTeamOnline}
                         isPurseFinished={isPurseFinished}
                         disabled={isBidDisabled}
+                        errorMsg={paddleError?.teamId === t._id ? paddleError.message : null}
                         onClick={() => placeBid(t._id)}
                       />
                     );

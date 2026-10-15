@@ -115,9 +115,10 @@ function generateTeamSummaryPDF({ organizerName, team, players = [] }) {
     currentY += 28;
     const columns = [
       { label: '#', width: 26, align: 'center' },
-      { label: 'PLAYER NAME', width: 145, align: 'left' },
-      { label: 'ROLE / CATEGORY', width: 110, align: 'left' },
-      { label: 'STYLE (BAT • BOWL)', width: 110, align: 'left' },
+      { label: 'PLAYER NAME', width: 105, align: 'left' },
+      { label: 'PHONE', width: 75, align: 'left' },
+      { label: 'ROLE / CATEGORY', width: 100, align: 'left' },
+      { label: 'STYLE (BAT • BOWL)', width: 85, align: 'left' },
       { label: 'BASE PRICE', width: 62, align: 'right' },
       { label: 'SOLD PRICE', width: 70, align: 'right' },
     ];
@@ -173,22 +174,26 @@ function generateTeamSummaryPDF({ organizerName, team, players = [] }) {
         doc.fillColor('#0F172A').fontSize(8.5).font('Helvetica-Bold').text(p.name, colX + 4, currentY + 6, { width: columns[1].width - 8, align: 'left', ellipsis: true });
         colX += columns[1].width;
 
-        // 2: Role / Category
-        const catName = p.category?.name || (typeof p.category === 'string' ? p.category : null);
-        const roleCat = catName ? `${formatRole(p.playerType)} (${catName})` : formatRole(p.playerType);
-        doc.fillColor('#334155').fontSize(7.5).font('Helvetica').text(roleCat, colX + 4, currentY + 6, { width: columns[2].width - 8, align: 'left', ellipsis: true });
+        // 2: Phone
+        doc.fillColor('#64748B').fontSize(7.5).font('Helvetica').text(p.phone || '-', colX + 4, currentY + 6, { width: columns[2].width - 8, align: 'left', ellipsis: true });
         colX += columns[2].width;
 
-        // 3: Style
-        doc.fillColor('#64748B').fontSize(7.5).font('Helvetica').text(formatStyle(p.battingStyle, p.bowlingStyle), colX + 4, currentY + 6, { width: columns[3].width - 8, align: 'left', ellipsis: true });
+        // 3: Role / Category
+        const catName = p.category?.name || (typeof p.category === 'string' ? p.category : null);
+        const roleCat = catName ? `${formatRole(p.playerType)} (${catName})` : formatRole(p.playerType);
+        doc.fillColor('#334155').fontSize(7.5).font('Helvetica').text(roleCat, colX + 4, currentY + 6, { width: columns[3].width - 8, align: 'left', ellipsis: true });
         colX += columns[3].width;
 
-        // 4: Base Price
-        doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(formatCurrency(p.basePrice), colX + 4, currentY + 6, { width: columns[4].width - 8, align: 'right' });
+        // 4: Style
+        doc.fillColor('#64748B').fontSize(7.5).font('Helvetica').text(formatStyle(p.battingStyle, p.bowlingStyle), colX + 4, currentY + 6, { width: columns[4].width - 8, align: 'left', ellipsis: true });
         colX += columns[4].width;
 
-        // 5: Sold Price
-        doc.fillColor('#0F5132').fontSize(8.5).font('Helvetica-Bold').text(formatCurrency(p.soldPrice), colX + 4, currentY + 6, { width: columns[5].width - 8, align: 'right' });
+        // 5: Base Price
+        doc.fillColor('#64748B').fontSize(8).font('Helvetica').text(formatCurrency(p.basePrice), colX + 4, currentY + 6, { width: columns[5].width - 8, align: 'right' });
+        colX += columns[5].width;
+
+        // 6: Sold Price
+        doc.fillColor('#0F5132').fontSize(8.5).font('Helvetica-Bold').text(formatCurrency(p.soldPrice), colX + 4, currentY + 6, { width: columns[6].width - 8, align: 'right' });
 
         currentY += rowHeight;
       });
@@ -282,10 +287,11 @@ function generateAuctionHistoryPDF({ organizerName, players = [], teams = [] }) 
 
     const playerColumns = [
       { label: '#', width: 25, align: 'center' },
-      { label: 'PLAYER NAME', width: 140, align: 'left' },
-      { label: 'ROLE / CAT', width: 95, align: 'left' },
+      { label: 'PLAYER NAME', width: 110, align: 'left' },
+      { label: 'PHONE', width: 65, align: 'left' },
+      { label: 'ROLE / CAT', width: 75, align: 'left' },
       { label: 'STATUS', width: 55, align: 'center' },
-      { label: 'WINNING FRANCHISE', width: 125, align: 'left' },
+      { label: 'WINNING FRANCHISE', width: 110, align: 'left' },
       { label: 'FINAL PRICE', width: 83, align: 'right' },
     ];
 
@@ -334,28 +340,32 @@ function generateAuctionHistoryPDF({ organizerName, players = [], teams = [] }) 
       doc.fillColor('#0F172A').fontSize(8).font('Helvetica-Bold').text(p.name, colX + 4, currentY + 5, { width: playerColumns[1].width - 8, align: 'left', ellipsis: true });
       colX += playerColumns[1].width;
 
-      // 2: Role / Cat
-      const catName = p.category?.name || (typeof p.category === 'string' ? p.category : null);
-      const roleText = catName ? `${formatRole(p.playerType)} (${catName})` : formatRole(p.playerType);
-      doc.fillColor('#475569').fontSize(7.5).font('Helvetica').text(roleText, colX + 4, currentY + 5, { width: playerColumns[2].width - 8, align: 'left', ellipsis: true });
+      // 2: Phone
+      doc.fillColor('#64748B').fontSize(7.5).font('Helvetica').text(p.phone || '-', colX + 4, currentY + 5, { width: playerColumns[2].width - 8, align: 'left', ellipsis: true });
       colX += playerColumns[2].width;
 
-      // 3: Status
+      // 3: Role / Cat
+      const catName = p.category?.name || (typeof p.category === 'string' ? p.category : null);
+      const roleText = catName ? `${formatRole(p.playerType)} (${catName})` : formatRole(p.playerType);
+      doc.fillColor('#475569').fontSize(7.5).font('Helvetica').text(roleText, colX + 4, currentY + 5, { width: playerColumns[3].width - 8, align: 'left', ellipsis: true });
+      colX += playerColumns[3].width;
+
+      // 4: Status
       const isSold = p.auctionStatus === 'SOLD';
       const isUnsold = p.auctionStatus === 'UNSOLD';
       const statusColor = isSold ? '#15803D' : isUnsold ? '#DC2626' : '#64748B';
-      doc.fillColor(statusColor).fontSize(7.5).font('Helvetica-Bold').text(p.auctionStatus || 'PENDING', colX, currentY + 5, { width: playerColumns[3].width, align: 'center' });
-      colX += playerColumns[3].width;
-
-      // 4: Winning Team
-      const buyerId = (p.soldTo?._id || p.soldTo)?.toString();
-      const winningTeamName = isSold ? (p.soldTo?.teamName || teamMap[buyerId] || 'Sold') : '-';
-      doc.fillColor('#1E293B').fontSize(8).font('Helvetica').text(winningTeamName, colX + 4, currentY + 5, { width: playerColumns[4].width - 8, align: 'left', ellipsis: true });
+      doc.fillColor(statusColor).fontSize(7.5).font('Helvetica-Bold').text(p.auctionStatus || 'PENDING', colX, currentY + 5, { width: playerColumns[4].width, align: 'center' });
       colX += playerColumns[4].width;
 
-      // 5: Final Price
+      // 5: Winning Team
+      const buyerId = (p.soldTo?._id || p.soldTo)?.toString();
+      const winningTeamName = isSold ? (p.soldTo?.teamName || teamMap[buyerId] || 'Sold') : '-';
+      doc.fillColor('#1E293B').fontSize(8).font('Helvetica').text(winningTeamName, colX + 4, currentY + 5, { width: playerColumns[5].width - 8, align: 'left', ellipsis: true });
+      colX += playerColumns[5].width;
+
+      // 6: Final Price
       const priceText = isSold ? formatCurrency(p.soldPrice) : '-';
-      doc.fillColor(isSold ? '#0F5132' : '#94A3B8').fontSize(8).font(isSold ? 'Helvetica-Bold' : 'Helvetica').text(priceText, colX + 4, currentY + 5, { width: playerColumns[5].width - 8, align: 'right' });
+      doc.fillColor(isSold ? '#0F5132' : '#94A3B8').fontSize(8).font(isSold ? 'Helvetica-Bold' : 'Helvetica').text(priceText, colX + 4, currentY + 5, { width: playerColumns[6].width - 8, align: 'right' });
 
       currentY += rowHeight;
     });

@@ -42,6 +42,7 @@ const playerSchema = new mongoose.Schema({
   },
   soldTo: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null },
   soldPrice: { type: Number, default: 0 },
+  previousTeam: { type: mongoose.Schema.Types.ObjectId, ref: 'Team', default: null }, // RTM defending franchise
   isApproved: { type: Boolean, default: false }, // admin approves registered players before auction
 }, { timestamps: true });
 

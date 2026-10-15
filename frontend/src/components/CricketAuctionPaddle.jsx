@@ -10,6 +10,7 @@ export default function CricketAuctionPaddle({
   isTeamOnline = false,
   isPurseFinished = false,
   disabled = false,
+  errorMsg = null,
   onClick,
 }) {
   const paddleNumber = (index + 1).toString().padStart(2, "0");
@@ -56,6 +57,16 @@ export default function CricketAuctionPaddle({
       >
         {/* Subtle Inner Gloss Sheen */}
         <div className="absolute inset-x-0 top-0 h-1/2 bg-white/20 rounded-t-full pointer-events-none"></div>
+
+        {/* Error / Validation Message Overlay */}
+        {errorMsg && !isHighestBidder && (
+          <div className="absolute inset-0 bg-slate-950/90 backdrop-blur-[2px] z-30 flex flex-col items-center justify-center p-1.5 text-center pointer-events-none rounded-full border-2 border-red-500/80 shadow-inner">
+            <span className="text-base sm:text-lg mb-0.5 filter drop-shadow">⚠️</span>
+            <span className="text-[9px] sm:text-[10px] font-black tracking-wider px-2 py-0.5 rounded-full bg-red-600 text-white border border-red-300 shadow-md text-center leading-tight">
+              {errorMsg}
+            </span>
+          </div>
+        )}
 
         {/* Purse Finished Prominent Overlay Message over paddle */}
         {purseFinished && !isHighestBidder && (

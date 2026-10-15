@@ -185,6 +185,20 @@ async function markSold(req, res) {
   }
 }
 
+// POST /api/auction/rtm -- marks current player SOLD via Right to Match (RTM)
+async function useRtm(req, res) {
+  const organizerId = req.user.id;
+  auctionTimerService.clearAuctionTimer(organizerId);
+
+  try {
+    const { player, team, finalPrice } = await auctionService.resolveRtm(organizerId);
+    emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team, finalPrice, isRtm: true });
+    res.json({ message: `RTM MATCHED: ${player.name} retained by ${team.teamName} for Rs. ${finalPrice}`, player, team, isRtm: true });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+}
+
 // POST /api/auction/unsold -- marks current player UNSOLD
 async function markUnsold(req, res) {
   const organizerId = req.user.id;
@@ -239,5 +253,5 @@ function emitAuctionUpdate(req, payload) {
 
 module.exports = {
   getState, getCategoryPlayers, selectCategory, shuffleQueue,
-  nextPlayer, placeBid, undoBid, markSold, markUnsold, reAuctionUnsold, getHistory,
+  nextPlayer, placeBid, undoBid, markSold, useRtm, markUnsold, reAuctionUnsold, getHistory,
 };

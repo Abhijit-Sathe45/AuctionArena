@@ -11,11 +11,12 @@ export function getSocket() {
   if (!socket) {
     socket = io(SOCKET_URL, {
       autoConnect: false,
-      transports: ['websocket', 'polling'], // Connect directly via WebSocket for instant latency
+      transports: ['websocket', 'polling'], // Prefer direct WebSocket for ultra-low latency
       upgrade: true,
+      rememberUpgrade: true,
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 500,
+      reconnectionAttempts: 15,
+      reconnectionDelay: 400,
     });
   }
   return socket;

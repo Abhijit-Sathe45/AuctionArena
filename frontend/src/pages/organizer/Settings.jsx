@@ -121,6 +121,24 @@ export default function Settings() {
             value={settings.maxPlayersPerTeam}
             onChange={(v) => update("maxPlayersPerTeam", v)}
           />
+          <Toggle
+            label="One Player Per Category Limit"
+            checked={!!settings.onePlayerPerCategoryEnabled}
+            onChange={(v) => update("onePlayerPerCategoryEnabled", v)}
+          />
+          <Toggle
+            label="Enable Right to Match (RTM) Card"
+            checked={!!settings.rtmEnabled}
+            onChange={(v) => update("rtmEnabled", v)}
+          />
+          {settings.rtmEnabled && (
+            <Field
+              label="RTM Cards Allowed per Franchise"
+              type="number"
+              value={settings.rtmCardsPerTeam || 2}
+              onChange={(v) => update("rtmCardsPerTeam", Math.max(1, Number(v) || 1))}
+            />
+          )}
         </div>
 
         <div className="card space-y-4 shadow-sm border-mauve/20">

@@ -29,6 +29,9 @@ const teamSchema = new mongoose.Schema({
   // Secret 4-digit PIN for mobile bidding remote (/bid/:slug)
   biddingPin: { type: String, default: null },
 
+  // Right to Match (RTM) count used
+  rtmCardsUsed: { type: Number, default: 0 },
+
   isApproved: { type: Boolean, default: false }, // admin approves registered teams before auction
 }, { timestamps: true });
 

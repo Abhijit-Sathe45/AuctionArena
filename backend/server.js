@@ -47,8 +47,12 @@ process.on('uncaughtException', (err) => {
 app.use(compression()); // gzip every response — smaller payloads, faster loads especially on mobile data
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(morgan('dev'));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use(morgan('dev', {
+  skip: (req) => req.url === '/health' || req.url === '/api/health' || req.url.startsWith('/uploads/'),
+}));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  maxAge: '1d', // Cache static player & team images in browser for 1 day
+}));
 
 app.get('/', (req, res) => res.json({ status: 'Tennis Cricket Auction API is running' }));
 app.get('/health', (req, res) => res.status(200).json({ status: 'ok', uptime: process.uptime(), timestamp: new Date() }));

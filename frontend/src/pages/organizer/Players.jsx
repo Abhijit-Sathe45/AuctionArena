@@ -12,6 +12,7 @@ export default function Players() {
   const { showToast } = useToast();
   const [players, setPlayers] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [teams, setTeams] = useState([]);
   const [roleFilter, setRoleFilter] = useState("ALL");
   const [approvalFilter, setApprovalFilter] = useState("ALL");
   const [auctionFilter, setAuctionFilter] = useState("ALL");
@@ -25,12 +26,14 @@ export default function Players() {
   const info = JSON.parse(localStorage.getItem("organizerInfo") || "{}");
 
   const load = useCallback(async () => {
-    const [{ data: p }, { data: c }] = await Promise.all([
+    const [{ data: p }, { data: c }, { data: t }] = await Promise.all([
       api.get("/organizer-admin/players"),
       api.get("/organizer-admin/categories"),
+      api.get("/organizer-admin/teams").catch(() => ({ data: [] })),
     ]);
     setPlayers(p);
     setCategories(c);
+    setTeams(t);
     setEdits((prev) => {
       const merged = {};
       p.forEach((pl) => {
@@ -39,6 +42,7 @@ export default function Players() {
           category: pl.category?._id || "",
           basePrice: pl.basePrice,
           photoUrl: pl.photoUrl || null,
+          previousTeam: pl.previousTeam?._id || pl.previousTeam || "",
         };
       });
       return merged;
@@ -80,6 +84,7 @@ export default function Players() {
         category: "",
         basePrice: 0,
         photoUrl: null,
+        previousTeam: "",
       }
     );
   }
@@ -91,11 +96,13 @@ export default function Players() {
   }
   function isDirty(player) {
     const e = getEdit(player._id);
+    const originalPrevTeam = player.previousTeam?._id || player.previousTeam || "";
     return (
       e.isApproved !== player.isApproved ||
       e.category !== (player.category?._id || "") ||
       Number(e.basePrice) !== player.basePrice ||
-      e.photoUrl !== (player.photoUrl || null)
+      e.photoUrl !== (player.photoUrl || null) ||
+      (e.previousTeam || "") !== originalPrevTeam
     );
   }
 
@@ -137,6 +144,7 @@ export default function Players() {
         category: e.category || null,
         basePrice: Number(e.basePrice),
         photoUrl: e.photoUrl,
+        previousTeam: e.previousTeam || null,
       });
       showToast(`Saved changes for ${player.name}.`, "success");
       await load();
@@ -535,6 +543,7 @@ export default function Players() {
                 <th className="py-2.5 pr-3 font-semibold">Approved</th>
                 <th className="py-2.5 pr-3 font-semibold">Category</th>
                 <th className="py-2.5 pr-3 font-semibold">Base Price</th>
+                <th className="py-2.5 pr-3 font-semibold" title="Franchise that holds Right to Match for this player">RTM Franchise</th>
                 <th className="py-2.5 pr-3 font-semibold">Auction Status</th>
                 <th className="py-2.5 pr-3 text-right font-semibold">Actions</th>
               </tr>
@@ -656,6 +665,22 @@ export default function Players() {
                           }
                         />
                       </div>
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      <select
+                        className="input-field text-xs py-1 max-w-[130px] font-medium"
+                        value={e.previousTeam || ""}
+                        onChange={(ev) =>
+                          setEdit(p._id, { previousTeam: ev.target.value || null })
+                        }
+                      >
+                        <option value="">None (No RTM)</option>
+                        {teams.map((t) => (
+                          <option key={t._id} value={t._id}>
+                            {t.teamName}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td className="py-2.5 pr-3">
                       <span

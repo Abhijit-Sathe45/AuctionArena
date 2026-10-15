@@ -14,6 +14,7 @@ router.post('/next-player', asyncHandler(ctrl.nextPlayer));
 router.post('/bid', asyncHandler(ctrl.placeBid));
 router.post('/undo-bid', asyncHandler(ctrl.undoBid));
 router.post('/sold', asyncHandler(ctrl.markSold));
+router.post('/rtm', asyncHandler(ctrl.useRtm));
 router.post('/unsold', asyncHandler(ctrl.markUnsold));
 router.post('/re-auction-unsold', asyncHandler(ctrl.reAuctionUnsold));
 router.get('/history', asyncHandler(ctrl.getHistory));

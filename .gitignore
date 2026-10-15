@@ -5,3 +5,4 @@ backend/uploads/*
 !backend/uploads/.gitkeep
 backend/generated-pdfs/
 .DS_Store
+tests-e2e/test-results/

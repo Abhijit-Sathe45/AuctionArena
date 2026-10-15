@@ -37,6 +37,14 @@ const auctionSettingsSchema = new mongoose.Schema({
 
   // Team owner remote mobile bidding (/bid/:slug)
   teamOwnerBiddingEnabled: { type: Boolean, default: false },
+
+  // Restrict teams to only buy one player per category
+  onePlayerPerCategoryEnabled: { type: Boolean, default: false },
+
+  // Right to Match (RTM) settings
+  rtmEnabled: { type: Boolean, default: false },
+  rtmCardsPerTeam: { type: Number, default: 2 },
 }, { timestamps: true });
 
 module.exports = mongoose.model('AuctionSettings', auctionSettingsSchema);
+

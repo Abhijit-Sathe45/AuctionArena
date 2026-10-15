@@ -16,13 +16,20 @@ async function updateSettings(req, res) {
     'maxPursePerTeam', 'minPlayersPerTeam', 'maxPlayersPerTeam', 'bidIncrementRules',
     'playerRegistrationOpen', 'teamRegistrationOpen',
     'countdownEnabled', 'countdownDuration',
-    'teamOwnerBiddingEnabled',
+    'teamOwnerBiddingEnabled', 'onePlayerPerCategoryEnabled',
+    'rtmEnabled', 'rtmCardsPerTeam'
   ];
   const update = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
   const settings = await AuctionSettings.findOneAndUpdate(
     { organizer: req.user.id }, update, { new: true, upsert: true }
   );
+  try {
+    const auctionService = require('../services/auctionService');
+    auctionService.invalidateSettingsCache(req.user.id);
+  } catch (e) {
+    // ignore
+  }
   res.json(settings);
 }
 
@@ -82,8 +89,8 @@ async function listPlayers(req, res) {
   res.json(players);
 }
 async function updatePlayer(req, res) {
-  // Used to: approve player, assign category, set base price, replace photo (admin fix-up)
-  const allowed = ['category', 'basePrice', 'isApproved', 'photoUrl'];
+  // Used to: approve player, assign category, set base price, set RTM defending franchise, replace photo (admin fix-up)
+  const allowed = ['category', 'basePrice', 'isApproved', 'photoUrl', 'previousTeam'];
   const update = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
 

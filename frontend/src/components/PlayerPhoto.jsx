@@ -41,6 +41,8 @@ export default function PlayerPhoto({
     <img
       src={imageSrc}
       alt={imageAlt}
+      loading="lazy"
+      decoding="async"
       onError={() => setErrored(true)}
       className={`${size} rounded-2xl object-cover`}
     />

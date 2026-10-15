@@ -105,8 +105,8 @@ function registerAuctionSocketHandlers(io, socket) {
     }
   });
 
-  // Fast-path team owner mobile remote bid — { token } -> ack(err, state)
-  socket.on('auction:team-bid', async ({ token } = {}, ack) => {
+  // Fast-path team owner mobile remote bid — { token, expectedBidAmount } -> ack(err, state)
+  socket.on('auction:team-bid', async ({ token, expectedBidAmount } = {}, ack) => {
     try {
       const { teamId, organizerId } = authenticateTeamSocket(token);
 
@@ -118,7 +118,10 @@ function registerAuctionSocketHandlers(io, socket) {
       // Ensure this team is tracked as online
       auctionPresenceService.registerTeamOnline(io, organizerId, teamId, socket.id);
 
-      const state = await auctionService.placeBid(organizerId, teamId, { isOrganizer: false });
+      const state = await auctionService.placeBid(organizerId, teamId, {
+        isOrganizer: false,
+        expectedBidAmount,
+      });
       io.to(`auction-${organizerId}`).emit('auction-update', { event: 'BID_PLACED', state });
       if (typeof ack === 'function') ack({ ok: true, state });
     } catch (err) {
