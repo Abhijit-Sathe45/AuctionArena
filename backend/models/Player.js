@@ -23,6 +23,10 @@ const playerSchema = new mongoose.Schema({
   age: { type: Number, required: true },
   photoUrl: { type: String, default: null },
   phone: { type: String, trim: true },
+  tShirtSize: { type: String, trim: true, default: '' },
+  jerseyNumber: { type: String, trim: true, default: '' },
+  jerseyName: { type: String, trim: true, default: '' },
+  villageCity: { type: String, trim: true, default: '' },
 
   // Payment for player registration
   registrationFeePaid: { type: Number, default: 0 },

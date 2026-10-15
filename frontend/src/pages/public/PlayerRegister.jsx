@@ -19,6 +19,7 @@ export default function PlayerRegister() {
   const [form, setForm] = useState({
     name: '', battingStyle: 'RIGHT_HANDED', bowlingStyle: 'NA',
     playerType: 'BATSMAN', age: '', phone: '', photoUrl: null,
+    tShirtSize: '', jerseyNumber: '', jerseyName: '', villageCity: '',
   });
 
   useEffect(() => {
@@ -134,9 +135,37 @@ export default function PlayerRegister() {
           </div>
         </div>
 
-        <div>
-          <label className="label-text">WhatsApp Phone</label>
-          <input required type="tel" className="input-field" value={form.phone} onChange={e => update('phone', e.target.value)} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <div>
+            <label className="label-text">WhatsApp Phone</label>
+            <input required type="tel" placeholder="e.g. 9876543210" className="input-field" value={form.phone} onChange={e => update('phone', e.target.value)} />
+          </div>
+          <div>
+            <label className="label-text">Village / City</label>
+            <input required type="text" placeholder="e.g. Pune / Kolhapur" className="input-field" value={form.villageCity} onChange={e => update('villageCity', e.target.value)} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div>
+            <label className="label-text">T-Shirt Size</label>
+            <select required className="input-field" value={form.tShirtSize} onChange={e => update('tShirtSize', e.target.value)}>
+              <option value="">Select Size</option>
+              <option value="S = 38">S = 38</option>
+              <option value="M = 40">M = 40</option>
+              <option value="L = 42">L = 42</option>
+              <option value="XL = 44">XL = 44</option>
+              <option value="XXL = 46">XXL = 46</option>
+            </select>
+          </div>
+          <div>
+            <label className="label-text">Jersey Number</label>
+            <input required type="text" maxLength={4} placeholder="e.g. 7 or 18" className="input-field" value={form.jerseyNumber} onChange={e => update('jerseyNumber', e.target.value)} />
+          </div>
+          <div>
+            <label className="label-text">Jersey Name</label>
+            <input required type="text" maxLength={20} placeholder="e.g. VIRAT" className="input-field uppercase" value={form.jerseyName} onChange={e => update('jerseyName', e.target.value)} />
+          </div>
         </div>
 
         <ImageUpload

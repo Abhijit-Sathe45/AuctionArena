@@ -64,7 +64,10 @@ async function registerPlayer(req, res) {
       return res.status(400).json({ message: 'Player registration is full. No more slots available.' });
     }
 
-    const { name, battingStyle, bowlingStyle, playerType, age, photoUrl, phone } = req.body;
+    const {
+      name, battingStyle, bowlingStyle, playerType, age, photoUrl, phone,
+      tShirtSize, jerseyNumber, jerseyName, villageCity
+    } = req.body;
     if (!name || !battingStyle || !playerType || !age) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -89,6 +92,10 @@ async function registerPlayer(req, res) {
       age: Number(age),
       photoUrl,
       phone: phone ? phone.trim() : '',
+      tShirtSize: tShirtSize ? tShirtSize.trim() : '',
+      jerseyNumber: jerseyNumber ? jerseyNumber.trim() : '',
+      jerseyName: jerseyName ? jerseyName.trim() : '',
+      villageCity: villageCity ? villageCity.trim() : '',
       registrationFeePaid: fee,
       paymentStatus: fee > 0 ? 'PENDING' : 'FREE',
     });

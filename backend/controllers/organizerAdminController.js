@@ -89,8 +89,10 @@ async function listPlayers(req, res) {
   res.json(players);
 }
 async function updatePlayer(req, res) {
-  // Used to: approve player, assign category, set base price, set RTM defending franchise, replace photo (admin fix-up)
-  const allowed = ['category', 'basePrice', 'isApproved', 'photoUrl', 'previousTeam'];
+  const allowed = [
+    'category', 'basePrice', 'isApproved', 'photoUrl', 'previousTeam',
+    'phone', 'tShirtSize', 'jerseyNumber', 'jerseyName', 'villageCity'
+  ];
   const update = {};
   allowed.forEach(k => { if (req.body[k] !== undefined) update[k] = req.body[k]; });
 
