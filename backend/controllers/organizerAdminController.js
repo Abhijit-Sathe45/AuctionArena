@@ -1,9 +1,91 @@
+const Organizer = require('../models/Organizer');
 const AuctionSettings = require('../models/AuctionSettings');
 const Category = require('../models/Category');
 const ExtraPointSet = require('../models/ExtraPointSet');
 const Player = require('../models/Player');
 const Team = require('../models/Team');
 const { deleteImages } = require('../utils/cloudinaryCleanup');
+
+// ---------- PROFILE ----------
+async function getProfile(req, res) {
+  const organizer = await Organizer.findById(req.user.id).select(
+    'tournamentName organizerName email phone logoUrl slug loginId tournamentDate planType status passExpiryDate'
+  );
+  if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
+  res.json(organizer);
+}
+
+async function updateProfile(req, res) {
+  const { tournamentName, organizerName, phone, tournamentDate, logoUrl } = req.body;
+  const organizer = await Organizer.findById(req.user.id);
+  if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
+
+  if (tournamentName !== undefined) {
+    const trimmed = String(tournamentName).trim();
+    if (!trimmed) {
+      return res.status(400).json({ message: 'Tournament name cannot be empty' });
+    }
+    organizer.tournamentName = trimmed;
+  }
+
+  if (organizerName !== undefined) {
+    organizer.organizerName = String(organizerName).trim();
+  }
+
+  if (phone !== undefined) {
+    organizer.phone = String(phone).trim();
+  }
+
+  if (tournamentDate !== undefined && tournamentDate) {
+    const d = new Date(tournamentDate);
+    if (!isNaN(d.getTime())) {
+      organizer.tournamentDate = d;
+    }
+  }
+
+  if (logoUrl !== undefined) {
+    const oldLogo = organizer.logoUrl;
+    const newLogo = logoUrl ? String(logoUrl).trim() : null;
+    if (oldLogo && oldLogo !== newLogo) {
+      try {
+        await deleteImages([oldLogo]);
+      } catch (e) {
+        console.error('Failed to cleanup old logo image:', e);
+      }
+    }
+    organizer.logoUrl = newLogo;
+  }
+
+  await organizer.save();
+
+  // Notify socket room
+  try {
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`auction-${organizer._id}`).emit('tournament-updated', {
+        tournamentName: organizer.tournamentName,
+        logoUrl: organizer.logoUrl,
+      });
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  res.json({
+    id: organizer._id,
+    tournamentName: organizer.tournamentName,
+    organizerName: organizer.organizerName,
+    email: organizer.email,
+    phone: organizer.phone,
+    logoUrl: organizer.logoUrl,
+    slug: organizer.slug,
+    loginId: organizer.loginId,
+    tournamentDate: organizer.tournamentDate,
+    planType: organizer.planType,
+    status: organizer.status,
+    passExpiryDate: organizer.passExpiryDate,
+  });
+}
 
 // ---------- SETTINGS ----------
 async function getSettings(req, res) {
@@ -85,8 +167,65 @@ async function listPlayers(req, res) {
   const filter = { organizer: req.user.id };
   if (req.query.status) filter.auctionStatus = req.query.status;
   if (req.query.category) filter.category = req.query.category;
+  if (req.query.teamId) filter.soldTo = req.query.teamId;
   const players = await Player.find(filter).populate('category').populate('soldTo');
   res.json(players);
+}
+
+// ---------- SQUAD POSTERS & BOUGHT PLAYERS ----------
+async function getSquadPostersData(req, res) {
+  const organizer = await Organizer.findById(req.user.id);
+  if (!organizer) return res.status(404).json({ message: 'Organizer not found' });
+
+  const teams = await Team.find({ organizer: req.user.id }).sort({ teamName: 1 });
+  const players = await Player.find({ organizer: req.user.id, auctionStatus: 'SOLD' })
+    .populate('category')
+    .sort({ soldPrice: -1, name: 1 });
+
+  const teamMap = {};
+  teams.forEach(t => {
+    teamMap[t._id.toString()] = {
+      _id: t._id,
+      teamName: t.teamName,
+      teamLogoUrl: t.teamLogoUrl,
+      ownerName: t.ownerName,
+      ownerPlaysMatch: t.ownerPlaysMatch,
+      phone: t.phone,
+      totalPurse: t.totalPurse,
+      purseRemaining: t.purseRemaining,
+      extraPointsReceived: t.extraPointsReceived || [],
+      players: []
+    };
+  });
+
+  players.forEach(p => {
+    const tId = p.soldTo?.toString();
+    if (tId && teamMap[tId]) {
+      teamMap[tId].players.push({
+        _id: p._id,
+        name: p.name,
+        photoUrl: p.photoUrl,
+        playerType: p.playerType,
+        battingStyle: p.battingStyle,
+        bowlingStyle: p.bowlingStyle,
+        jerseyNumber: p.jerseyNumber,
+        jerseyName: p.jerseyName,
+        tShirtSize: p.tShirtSize,
+        soldPrice: p.soldPrice,
+        categoryName: p.category?.name || 'General'
+      });
+    }
+  });
+
+  res.json({
+    tournament: {
+      tournamentName: organizer.tournamentName,
+      logoUrl: organizer.logoUrl,
+      tournamentDate: organizer.tournamentDate,
+      slug: organizer.slug,
+    },
+    teams: Object.values(teamMap)
+  });
 }
 async function updatePlayer(req, res) {
   const allowed = [
@@ -186,10 +325,12 @@ async function getDashboardOverview(req, res) {
 }
 
 module.exports = {
+  getProfile, updateProfile,
   getSettings, updateSettings,
   listCategories, createCategory, updateCategory, deleteCategory,
   listExtraPointSets, createExtraPointSet, grantExtraPointsToTeam,
   listPlayers, updatePlayer, deletePlayer,
   listTeams, createTeamByAdmin, updateTeam, deleteTeam,
   getDashboardOverview,
+  getSquadPostersData,
 };

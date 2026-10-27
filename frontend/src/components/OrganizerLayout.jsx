@@ -5,6 +5,7 @@ import DemoSimulatorModal from './DemoSimulatorModal';
 
 const links = [
   { to: '/organizer/dashboard', label: 'Dashboard', icon: '📊' },
+  { to: '/organizer/profile', label: 'Tournament Profile', icon: '🏆' },
   { to: '/organizer/players', label: 'Players & Squads', icon: '🏏' },
   { to: '/organizer/teams', label: 'Teams & Franchises', icon: '👥' },
   { to: '/organizer/categories', label: 'Categories & Base Prices', icon: '🏷️' },
@@ -114,9 +115,14 @@ export default function OrganizerLayout({ children }) {
             </span>
           ) : (
             organizer?.tournamentName && (
-              <span className="text-[10px] sm:text-xs px-2.5 py-1 bg-amber-500/20 border border-amber-400/40 rounded-full text-amber-300 font-bold truncate max-w-[140px] sm:max-w-[200px]">
-                🏆 {organizer.tournamentName}
-              </span>
+              <NavLink
+                to="/organizer/profile"
+                className="text-[10px] sm:text-xs px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 rounded-full text-amber-300 font-bold truncate max-w-[140px] sm:max-w-[220px] transition-colors flex items-center gap-1.5 active:scale-95"
+                title="Edit Tournament Profile & Logo"
+              >
+                <span className="truncate">🏆 {organizer.tournamentName}</span>
+                <span className="text-[10px] opacity-80">✏️</span>
+              </NavLink>
             )
           )}
         </div>
@@ -167,9 +173,15 @@ export default function OrganizerLayout({ children }) {
                     PRO
                   </span>
                 </div>
-                <p className="text-[11px] text-emerald-400 font-semibold truncate max-w-[150px] mt-0.5">
-                  {organizer?.tournamentName || 'Cricket Auctioneer'}
-                </p>
+                <NavLink
+                  to="/organizer/profile"
+                  onClick={() => setSidebarOpen(false)}
+                  className="text-[11px] text-emerald-400 hover:text-emerald-300 font-semibold truncate max-w-[150px] mt-0.5 flex items-center gap-1 group transition-colors"
+                  title="Edit Tournament Profile & Logo"
+                >
+                  <span className="truncate">{organizer?.tournamentName || 'Cricket Auctioneer'}</span>
+                  <span className="text-[9px] opacity-0 group-hover:opacity-100 transition-opacity">✏️</span>
+                </NavLink>
               </div>
             </div>
             <button

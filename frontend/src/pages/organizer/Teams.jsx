@@ -7,6 +7,7 @@ import ImageUpload from "../../components/ImageUpload";
 import { compressImage } from "../../utils/imageCompressor";
 import { useToast } from "../../context/ToastContext";
 import { getSocket } from "../../socket";
+import TeamSquadPosterModal from "../../components/TeamSquadPosterModal";
 
 export default function Teams() {
   const { showToast } = useToast();
@@ -14,6 +15,8 @@ export default function Teams() {
   const [status, setStatus] = useState({ type: "", message: "" });
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [posterModalOpen, setPosterModalOpen] = useState(false);
+  const [selectedPosterTeamId, setSelectedPosterTeamId] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
   const [uploadingFormLogo, setUploadingFormLogo] = useState(false);
   const [form, setForm] = useState({
@@ -185,14 +188,29 @@ export default function Teams() {
 
   return (
     <OrganizerLayout>
+      <TeamSquadPosterModal
+        isOpen={posterModalOpen}
+        onClose={() => setPosterModalOpen(false)}
+        initialTeamId={selectedPosterTeamId}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl text-turf">Teams</h1>
           <p className="text-mauve-dark text-xs sm:text-sm mt-0.5">
-            Approve teams and manage owners before auction starts.
+            Approve teams, manage owners, and generate official squad announcement posters.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={() => { setSelectedPosterTeamId(null); setPosterModalOpen(true); }}
+            className="btn-secondary text-xs sm:text-sm py-2 px-3.5 w-full sm:w-auto shrink-0 font-bold border-amber-400 text-amber-950 bg-amber-50 hover:bg-amber-100 flex items-center justify-center gap-1.5 shadow-xs transition active:scale-95"
+            title="Generate and download team squad posters with player photos & roles"
+          >
+            <span>🏆</span>
+            <span>Squad Posters & PDFs</span>
+          </button>
           <input
             type="text"
             placeholder="🔍 Search team, owner..."
@@ -395,7 +413,16 @@ export default function Teams() {
                       <span className="text-slate-500 font-normal">₹{t.totalPurse?.toLocaleString("en-IN")}</span>
                     </td>
                     <td className="py-2.5 pr-3 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => { setSelectedPosterTeamId(t._id); setPosterModalOpen(true); }}
+                          className="text-xs font-bold text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-300 px-2 py-1 rounded-lg flex items-center gap-1 shadow-2xs transition active:scale-95"
+                          title={`View ${t.teamName} Squad Poster & Download PDF`}
+                        >
+                          <span>🖼️</span>
+                          <span className="hidden sm:inline">Poster</span>
+                        </button>
                         <button
                           onClick={() => saveRow(t)}
                           disabled={!dirty || savingId === t._id}

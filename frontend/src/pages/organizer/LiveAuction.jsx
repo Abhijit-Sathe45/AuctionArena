@@ -13,6 +13,7 @@ import LiveCommentaryFeed from "../../components/LiveCommentaryFeed";
 import DemoSimulatorModal from "../../components/DemoSimulatorModal";
 import CricketAuctionPaddle from "../../components/CricketAuctionPaddle";
 import PlayerAuctionPlaque from "../../components/PlayerAuctionPlaque";
+import TeamSquadPosterModal from "../../components/TeamSquadPosterModal";
 import { getNextBidAmount } from "../../utils/bidIncrement";
 import { getSocket, emitWithAck } from "../../socket";
 import {
@@ -56,6 +57,7 @@ export default function LiveAuction() {
   const [showVideo, setShowVideo] = useState(false); // whether the auctioneer's video broadcast panel is open
   const [showOverlayModal, setShowOverlayModal] = useState(false); // OBS stream overlay config modal
   const [showDemoModal, setShowDemoModal] = useState(false); // Demo tournament practice modal
+  const [showPosterModal, setShowPosterModal] = useState(false); // Team squad posters & PDFs modal
   const [botActive, setBotActive] = useState(false); // AI bot auto-bidder practice simulator
   const [botSpeed, setBotSpeed] = useState("normal"); // 'normal' (2.5s) | 'fast' (1.3s) | 'intense' (0.8s)
   const [stampData, setStampData] = useState(null); // { result: 'SOLD' | 'UNSOLD', player, team, finalPrice }
@@ -603,6 +605,12 @@ export default function LiveAuction() {
         onDataChanged={refresh}
       />
 
+      {/* Official Team Squad Poster & PDF Downloads Modal */}
+      <TeamSquadPosterModal
+        isOpen={showPosterModal}
+        onClose={() => setShowPosterModal(false)}
+      />
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-1">
         <h1 className="font-display text-2xl sm:text-3xl text-turf">Live Auction</h1>
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -647,6 +655,16 @@ export default function LiveAuction() {
               </span>
             </button>
           </div>
+
+          {/* Official Squad Posters & PDFs Button */}
+          <button
+            onClick={() => setShowPosterModal(true)}
+            className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs sm:text-sm py-2 px-3 sm:px-4 rounded-xl shadow-xs transition-all duration-150 active:scale-95"
+            title="Generate & Download Team Posters with player photos & roles, plus Squad PDFs"
+          >
+            <span>🏆</span>
+            <span>Squad Posters & PDFs</span>
+          </button>
 
           {/* OBS Stream Overlay Button */}
           <button
@@ -780,6 +798,36 @@ export default function LiveAuction() {
 
       {!currentPlayer ? (
         <div className="mt-3 space-y-4 sm:space-y-6">
+          {/* Post-Auction Hub / Official Squad Posters & PDF Downloads Banner */}
+          <div className="card p-4 sm:p-5 bg-gradient-to-r from-[#09152a] via-[#0f2444] to-[#09152a] border-2 border-amber-500/40 text-white rounded-2xl shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center text-2xl font-black shadow-lg shadow-amber-500/25 shrink-0 border border-amber-300">
+                🏆
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] uppercase font-mono font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                    Post-Auction Hub
+                  </span>
+                  <span className="text-xs text-slate-400">Team Posters & Official Rosters</span>
+                </div>
+                <h3 className="font-extrabold text-base sm:text-lg text-white mt-0.5">
+                  Generate Team Squad Posters & Download PDFs
+                </h3>
+                <p className="text-xs text-slate-300 max-w-xl">
+                  Generate high-definition posters with team logos, player photos, and roles for social media/WhatsApp, and download official team player PDFs.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowPosterModal(true)}
+              className="btn-primary bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-500 hover:to-amber-600 text-slate-950 font-black text-xs sm:text-sm py-2.5 px-5 shrink-0 rounded-xl shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 transition active:scale-95"
+            >
+              <span>🖼️</span>
+              <span>Squad Posters & PDFs</span>
+            </button>
+          </div>
+
           {/* STEP 1: Choose category */}
           <div className="card border-slate-200">
             <div className="flex items-center gap-2 mb-3">

@@ -37,8 +37,16 @@ export function AuthProvider({ children }) {
     setSuperAdmin(null);
   }
 
+  function updateOrganizer(updatedFields) {
+    setOrganizer((prev) => {
+      const merged = { ...prev, ...updatedFields };
+      localStorage.setItem('organizerInfo', JSON.stringify(merged));
+      return merged;
+    });
+  }
+
   return (
-    <AuthContext.Provider value={{ organizer, superAdmin, loginOrganizer, logoutOrganizer, loginSuperAdmin, logoutSuperAdmin }}>
+    <AuthContext.Provider value={{ organizer, superAdmin, loginOrganizer, logoutOrganizer, updateOrganizer, loginSuperAdmin, logoutSuperAdmin }}>
       {children}
     </AuthContext.Provider>
   );

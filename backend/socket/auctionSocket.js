@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config');
 const Organizer = require('../models/Organizer');
@@ -55,13 +56,28 @@ function authenticateTeamSocket(token) {
 }
 
 function registerAuctionSocketHandlers(io, socket) {
-  // Everyone (organizer admin panel + public spectators + team remotes) joins a room to receive broadcasts.
-  socket.on('join-auction', (organizerId) => {
-    if (organizerId) {
-      socket.join(`auction-${organizerId}`);
-      const onlineTeamIds = auctionPresenceService.getOnlineTeams(organizerId);
-      socket.emit('online-teams-update', { onlineTeamIds });
+  // Everyone (organizer admin panel + public spectators + OBS stream overlays + team remotes)
+  // joins a room to receive real-time broadcasts. Supports both MongoDB ObjectId and tournament slug!
+  socket.on('join-auction', async (identifier) => {
+    if (!identifier) return;
+    const idStr = String(identifier).trim();
+    socket.join(`auction-${idStr}`);
+
+    let organizerId = idStr;
+    if (!mongoose.Types.ObjectId.isValid(idStr)) {
+      try {
+        const org = await Organizer.findOne({ slug: idStr, isActive: true }).select('_id').lean();
+        if (org) {
+          organizerId = org._id.toString();
+          socket.join(`auction-${organizerId}`);
+        }
+      } catch (err) {
+        console.error('Error resolving slug in join-auction:', err);
+      }
     }
+
+    const onlineTeamIds = auctionPresenceService.getOnlineTeams(organizerId);
+    socket.emit('online-teams-update', { onlineTeamIds });
   });
 
   // Team owner mobile remote registration on connect/login

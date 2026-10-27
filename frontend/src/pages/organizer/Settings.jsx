@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import api from "../../api/axios";
 import OrganizerLayout from "../../components/OrganizerLayout";
 import StatusMessage from "../../components/StatusMessage";
@@ -64,6 +65,44 @@ export default function Settings() {
         Configure limits, fees and purse rules for your tournament. Nothing is
         saved until you click Save Settings.
       </p>
+
+      {/* Tournament Profile & Branding Shortcut Card */}
+      <div className="card mb-6 bg-gradient-to-r from-[#0B1E3D] via-[#0F5132] to-[#0B1E3D] text-white border border-emerald-500/40 p-4 sm:p-5 shadow-md rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5 min-w-0">
+          <div className="w-12 h-12 rounded-xl bg-white p-1 border border-emerald-400/50 shadow-sm flex items-center justify-center shrink-0">
+            {organizer?.logoUrl ? (
+              <img
+                src={organizer.logoUrl}
+                alt="Tournament Logo"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <span className="text-2xl">🏏</span>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-sm">
+                Tournament Branding
+              </span>
+            </div>
+            <h2 className="text-base sm:text-lg font-bold text-white truncate mt-0.5">
+              {organizer?.tournamentName || "Cricket Tournament"}
+            </h2>
+            <p className="text-xs text-slate-300">
+              Customize tournament title, official logo emblem, match date, and coordinator info
+            </p>
+          </div>
+        </div>
+
+        <Link
+          to="/organizer/profile"
+          className="btn-primary py-2.5 px-4 text-xs font-bold shrink-0 flex items-center justify-center gap-2 shadow-sm bg-white text-slate-900 hover:bg-slate-100 transition-transform active:scale-95"
+        >
+          <span>🏆</span>
+          <span>Edit Tournament Profile & Logo →</span>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         <div className="card space-y-4 shadow-sm border-mauve/20">

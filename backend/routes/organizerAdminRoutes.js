@@ -11,6 +11,9 @@ router.use(protect, requireRole('ORGANIZER'), requireActivePass);
 router.get('/dashboard', asyncHandler(ctrl.getDashboardOverview));
 router.get('/analytics', asyncHandler(analyticsCtrl.getOrganizerAnalytics));
 
+router.get('/profile', asyncHandler(ctrl.getProfile));
+router.put('/profile', asyncHandler(ctrl.updateProfile));
+
 router.get('/settings', asyncHandler(ctrl.getSettings));
 router.put('/settings', asyncHandler(ctrl.updateSettings));
 
@@ -31,6 +34,8 @@ router.get('/teams', asyncHandler(ctrl.listTeams));
 router.post('/teams', asyncHandler(ctrl.createTeamByAdmin));
 router.put('/teams/:id', asyncHandler(ctrl.updateTeam));
 router.delete('/teams/:id', asyncHandler(ctrl.deleteTeam));
+
+router.get('/squad-posters', asyncHandler(ctrl.getSquadPostersData));
 
 // Demo / Practice Auction Simulator routes
 router.post('/demo/seed', asyncHandler(demoCtrl.seedDemoData));
