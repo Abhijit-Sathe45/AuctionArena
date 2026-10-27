@@ -177,9 +177,9 @@ async function markSold(req, res) {
   auctionTimerService.clearAuctionTimer(organizerId);
 
   try {
-    const { player, team, finalPrice } = await auctionService.resolveSold(organizerId);
-    emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team, finalPrice });
-    res.json({ message: `${player.name} sold to ${team.teamName} for Rs. ${finalPrice}`, player, team });
+    const { player, team, finalPrice, state } = await auctionService.resolveSold(organizerId);
+    emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team, finalPrice, state });
+    res.json({ message: `${player.name} sold to ${team.teamName} for Rs. ${finalPrice}`, player, team, state });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -191,9 +191,9 @@ async function useRtm(req, res) {
   auctionTimerService.clearAuctionTimer(organizerId);
 
   try {
-    const { player, team, finalPrice } = await auctionService.resolveRtm(organizerId);
-    emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team, finalPrice, isRtm: true });
-    res.json({ message: `RTM MATCHED: ${player.name} retained by ${team.teamName} for Rs. ${finalPrice}`, player, team, isRtm: true });
+    const { player, team, finalPrice, state } = await auctionService.resolveRtm(organizerId);
+    emitAuctionUpdate(req, { event: 'PLAYER_SOLD', player, team, finalPrice, isRtm: true, state });
+    res.json({ message: `RTM MATCHED: ${player.name} retained by ${team.teamName} for Rs. ${finalPrice}`, player, team, isRtm: true, state });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
@@ -205,9 +205,9 @@ async function markUnsold(req, res) {
   auctionTimerService.clearAuctionTimer(organizerId);
 
   try {
-    const { player } = await auctionService.resolveUnsold(organizerId);
-    emitAuctionUpdate(req, { event: 'PLAYER_UNSOLD', player });
-    res.json({ message: `${player.name} marked unsold`, player });
+    const { player, state } = await auctionService.resolveUnsold(organizerId);
+    emitAuctionUpdate(req, { event: 'PLAYER_UNSOLD', player, state });
+    res.json({ message: `${player.name} marked unsold`, player, state });
   } catch (err) {
     res.status(400).json({ message: err.message });
   }

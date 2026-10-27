@@ -38,21 +38,23 @@ class AuctionTimerService {
       if (!state || !state.currentPlayer || state.status !== 'RUNNING') return;
 
       if (state.currentBidTeam) {
-        const { player, team, finalPrice } = await auctionService.resolveSold(organizerId);
+        const { player, team, finalPrice, state: updatedState } = await auctionService.resolveSold(organizerId);
         if (this.io) {
           this.io.to(`auction-${organizerId}`).emit('auction-update', {
             event: 'PLAYER_SOLD',
             player,
             team,
             finalPrice,
+            state: updatedState,
           });
         }
       } else {
-        const { player } = await auctionService.resolveUnsold(organizerId);
+        const { player, state: updatedState } = await auctionService.resolveUnsold(organizerId);
         if (this.io) {
           this.io.to(`auction-${organizerId}`).emit('auction-update', {
             event: 'PLAYER_UNSOLD',
             player,
+            state: updatedState,
           });
         }
       }

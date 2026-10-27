@@ -24,6 +24,7 @@ const TeamBidRemote = lazy(() => import("./pages/public/TeamBidRemote"));
 const OrganizerLogin = lazy(() => import("./pages/organizer/Login"));
 const RenewPass = lazy(() => import("./pages/organizer/RenewPass"));
 const Dashboard = lazy(() => import("./pages/organizer/Dashboard"));
+const Profile = lazy(() => import("./pages/organizer/Profile"));
 const Players = lazy(() => import("./pages/organizer/Players"));
 const Teams = lazy(() => import("./pages/organizer/Teams"));
 const Categories = lazy(() => import("./pages/organizer/Categories"));
@@ -93,6 +94,14 @@ export default function App() {
               element={
                 <ProtectedRoute tokenKey="organizerToken">
                   <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/organizer/profile"
+              element={
+                <ProtectedRoute tokenKey="organizerToken">
+                  <Profile />
                 </ProtectedRoute>
               }
             />

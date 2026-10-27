@@ -21,6 +21,7 @@ export default function Players() {
   const [edits, setEdits] = useState({});
   const [savingId, setSavingId] = useState(null);
   const [uploadingId, setUploadingId] = useState(null);
+  const [downloadingPDF, setDownloadingPDF] = useState(false);
   const refreshTimer = useRef(null);
   const info = JSON.parse(localStorage.getItem("organizerInfo") || "{}");
 
@@ -270,12 +271,49 @@ export default function Players() {
       );
   }
 
+  async function downloadPlayersPDF() {
+    if (downloadingPDF) return;
+    setDownloadingPDF(true);
+    showToast("Generating Registered Players PDF...", "info");
+    try {
+      const res = await api.get("/pdf/players", { responseType: "blob" });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `${(info.tournamentName || "tournament").replace(/\s+/g, "_")}_registered_players.pdf`,
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      showToast("Registered Players PDF downloaded!", "success");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to download registered players PDF", "error");
+    } finally {
+      setDownloadingPDF(false);
+    }
+  }
+
   return (
     <OrganizerLayout>
       {/* Page Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl text-turf">Players</h1>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="font-display text-2xl sm:text-3xl text-turf">Players</h1>
+            <button
+              onClick={downloadPlayersPDF}
+              disabled={downloadingPDF || players.length === 0}
+              className="btn-primary text-xs py-1.5 px-3.5 rounded-xl flex items-center gap-1.5 font-bold shadow-xs transition active:scale-95 disabled:opacity-50"
+              title="Download official PDF list of all registered players with complete details"
+            >
+              <span>{downloadingPDF ? "⏳" : "📥"}</span>
+              <span>{downloadingPDF ? "Generating PDF..." : "Download Players (PDF)"}</span>
+            </button>
+          </div>
           <p className="text-mauve-dark text-xs sm:text-sm mt-0.5">
             Approve registrations, filter by role/approval, assign categories & base prices before auction.
           </p>

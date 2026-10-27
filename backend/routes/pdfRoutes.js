@@ -9,5 +9,6 @@ router.use(protect, requireRole('ORGANIZER'), requireActivePass);
 router.get('/team/:teamId', asyncHandler(ctrl.downloadTeamPDF));
 router.get('/all-teams', asyncHandler(ctrl.downloadAllTeamsInfo));
 router.get('/history', asyncHandler(ctrl.downloadHistoryPDF));
+router.get('/players', asyncHandler(ctrl.downloadRegisteredPlayersPDF));
 
 module.exports = router;

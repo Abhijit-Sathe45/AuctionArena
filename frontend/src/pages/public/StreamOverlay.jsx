@@ -98,18 +98,39 @@ export default function StreamOverlay() {
 
   const themeColors = getThemeColors();
 
+  // Helper to resolve media URLs (handles relative backend uploads in OBS)
+  const resolveMediaUrl = (url) => {
+    if (!url || typeof url !== "string") return "";
+    if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) return url;
+    if (url.startsWith("/")) {
+      const rawApiUrl = (import.meta.env.VITE_API_URL || "").replace(/\/api\/?$/, "").replace(/\/+$/, "");
+      if (rawApiUrl) return `${rawApiUrl}${url}`;
+    }
+    return url;
+  };
+
   // Load initial auction data
   const load = useCallback(async () => {
     try {
       const { data: d } = await api.get(`/public/${slug}/live-auction`);
       setData(d);
+      setError("");
       setRecentSales(d.recentSales || []);
       organizerIdRef.current = d.organizerId;
       if (d.serverTime) {
         serverOffsetRef.current = d.serverTime - Date.now();
       }
+
+      // Proactively ensure socket is joined to the auction room
+      const socket = getSocket();
+      if (socket && socket.connected) {
+        if (d.organizerId) socket.emit("join-auction", d.organizerId);
+        if (slug) socket.emit("join-auction", slug);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Could not connect to tournament live stream.");
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+      refreshTimer.current = setTimeout(load, 3000);
     }
   }, [slug]);
 
@@ -140,7 +161,18 @@ export default function StreamOverlay() {
     calculateRemaining();
     const interval = setInterval(calculateRemaining, 100);
     return () => clearInterval(interval);
-  }, [data?.state?.currentPlayer, data?.state?.countdownEnabled, data?.state?.biddingEndsAt]);
+  }, [data?.state]);
+
+  // Join room whenever organizerId becomes known or updates
+  useEffect(() => {
+    if (data?.organizerId) {
+      organizerIdRef.current = data.organizerId;
+      const socket = getSocket();
+      if (socket.connected) {
+        socket.emit("join-auction", data.organizerId);
+      }
+    }
+  }, [data?.organizerId]);
 
   // Socket Connection & Realtime Broadcast Event Handlers
   useEffect(() => {
@@ -148,23 +180,37 @@ export default function StreamOverlay() {
     const socket = getSocket();
     socket.connect();
 
-    function joinRoomIfReady() {
+    function joinRooms() {
       if (organizerIdRef.current) {
         socket.emit("join-auction", organizerIdRef.current);
       }
+      if (slug) {
+        socket.emit("join-auction", slug);
+      }
     }
 
-    socket.on("connect", joinRoomIfReady);
-    socket.on("auction-update", (payload) => {
+    // Join immediately if socket was already connected
+    if (socket.connected) {
+      joinRooms();
+    }
+
+    socket.on("connect", joinRooms);
+    socket.on("reconnect", joinRooms);
+
+    function handleAuctionUpdate(payload) {
       if (payload?.state) {
         setData((prev) => (prev ? { ...prev, state: payload.state } : prev));
       }
 
-      if (payload?.event === "BID_PLACED") {
+      const event = payload?.event;
+      if (event === "BID_PLACED") {
         setBidPulse(true);
         setTimeout(() => setBidPulse(false), 600);
         if (soundEnabled) playBidSound();
-      } else if (payload?.event === "PLAYER_SOLD") {
+        scheduleRefresh(250);
+      } else if (event === "BID_UNDONE") {
+        scheduleRefresh(100);
+      } else if (event === "PLAYER_SOLD") {
         setCelebrationData({
           result: "SOLD",
           player: payload.player,
@@ -173,11 +219,10 @@ export default function StreamOverlay() {
         });
         if (soundEnabled) playSoldSound();
         scheduleRefresh(150);
-        // Automatically hide celebration after 8 seconds
         setTimeout(() => {
           setCelebrationData(null);
         }, 8500);
-      } else if (payload?.event === "PLAYER_UNSOLD") {
+      } else if (event === "PLAYER_UNSOLD") {
         setCelebrationData({
           result: "UNSOLD",
           player: payload.player,
@@ -189,19 +234,32 @@ export default function StreamOverlay() {
         setTimeout(() => {
           setCelebrationData(null);
         }, 6000);
-      } else if (payload?.event === "NEXT_PLAYER") {
+      } else if (event === "NEXT_PLAYER") {
         setCelebrationData(null);
         scheduleRefresh(100);
+      } else if (event === "CATEGORY_SELECTED" || event === "QUEUE_SHUFFLED" || event === "RE_AUCTION_STARTED") {
+        scheduleRefresh(150);
+      } else {
+        scheduleRefresh(200);
       }
-    });
+    }
+
+    socket.on("auction-update", handleAuctionUpdate);
+
+    // Fallback polling safety-net for OBS Chromium Embedded Framework (CEF)
+    const pollInterval = setInterval(() => {
+      load();
+    }, 2500);
 
     return () => {
-      socket.off("connect", joinRoomIfReady);
-      socket.off("auction-update");
+      socket.off("connect", joinRooms);
+      socket.off("reconnect", joinRooms);
+      socket.off("auction-update", handleAuctionUpdate);
       socket.disconnect();
+      clearInterval(pollInterval);
       if (refreshTimer.current) clearTimeout(refreshTimer.current);
     };
-  }, [load, scheduleRefresh, soundEnabled]);
+  }, [load, scheduleRefresh, slug, soundEnabled]);
 
   const state = data?.state;
   const currentPlayer = state?.currentPlayer;
@@ -244,7 +302,7 @@ export default function StreamOverlay() {
             <div className="flex items-center gap-3">
               {data?.logoUrl ? (
                 <img
-                  src={data.logoUrl}
+                  src={resolveMediaUrl(data.logoUrl)}
                   alt="Logo"
                   className="w-11 h-11 object-contain rounded-lg border border-white/20 bg-black/40 p-1"
                 />
@@ -306,7 +364,7 @@ export default function StreamOverlay() {
               <div className={`flex items-center gap-3 bg-black/60 rounded-xl p-2 px-3 border border-white/10 ${bidPulse ? "animate-bid-pulse border-amber-400" : ""}`}>
                 {currentBidTeam?.teamLogoUrl && (
                   <img
-                    src={currentBidTeam.teamLogoUrl}
+                    src={resolveMediaUrl(currentBidTeam.teamLogoUrl)}
                     alt={currentBidTeam.teamName}
                     className="w-10 h-10 object-contain rounded-lg border border-white/20 bg-white/5 p-1"
                   />
@@ -335,7 +393,7 @@ export default function StreamOverlay() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
                 {data?.logoUrl && (
-                  <img src={data.logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-lg bg-black/40 p-1 border border-white/20" />
+                  <img src={resolveMediaUrl(data.logoUrl)} alt="Logo" className="w-10 h-10 object-contain rounded-lg bg-black/40 p-1 border border-white/20" />
                 )}
                 <div>
                   <span className="inline-block bg-red-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full tracking-wider animate-pulse mb-0.5">
@@ -417,7 +475,7 @@ export default function StreamOverlay() {
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/10">
                   {currentBidTeam.teamLogoUrl ? (
                     <img
-                      src={currentBidTeam.teamLogoUrl}
+                      src={resolveMediaUrl(currentBidTeam.teamLogoUrl)}
                       alt={currentBidTeam.teamName}
                       className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shrink-0"
                     />
@@ -453,7 +511,7 @@ export default function StreamOverlay() {
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2.5">
                 {data?.logoUrl ? (
-                  <img src={data.logoUrl} alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20" />
+                  <img src={resolveMediaUrl(data.logoUrl)} alt="Logo" className="w-10 h-10 object-contain rounded-xl bg-black/40 p-1 border border-white/20" />
                 ) : (
                   <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center font-display text-slate-950 font-black text-xl shadow">
                     🏆
@@ -555,7 +613,7 @@ export default function StreamOverlay() {
                 <div className="flex items-center gap-3 mt-3 pt-3 border-t border-white/10">
                   {currentBidTeam.teamLogoUrl ? (
                     <img
-                      src={currentBidTeam.teamLogoUrl}
+                      src={resolveMediaUrl(currentBidTeam.teamLogoUrl)}
                       alt={currentBidTeam.teamName}
                       className="w-11 h-11 object-contain rounded-xl bg-black/40 p-1 border border-white/20 shrink-0"
                     />
@@ -591,7 +649,7 @@ export default function StreamOverlay() {
             <div className="col-span-3 flex items-center gap-3 border-r border-white/10 pr-4">
               {data?.logoUrl ? (
                 <img
-                  src={data.logoUrl}
+                  src={resolveMediaUrl(data.logoUrl)}
                   alt="Tournament"
                   className="w-14 h-14 object-contain rounded-2xl bg-black/50 p-1.5 border border-white/20 shrink-0 shadow"
                 />
@@ -699,7 +757,7 @@ export default function StreamOverlay() {
 
                 {currentBidTeam?.teamLogoUrl ? (
                   <img
-                    src={currentBidTeam.teamLogoUrl}
+                    src={resolveMediaUrl(currentBidTeam.teamLogoUrl)}
                     alt={currentBidTeam.teamName}
                     className="w-11 h-11 object-contain rounded-xl bg-white/5 p-1 border border-white/20 shrink-0 shadow"
                   />
@@ -815,7 +873,7 @@ export default function StreamOverlay() {
 
                   {celebrationData.team?.teamLogoUrl ? (
                     <img
-                      src={celebrationData.team.teamLogoUrl}
+                      src={resolveMediaUrl(celebrationData.team.teamLogoUrl)}
                       alt={celebrationData.team.teamName}
                       className="w-24 h-24 object-contain rounded-2xl bg-white/10 p-2 border-2 border-amber-400 shadow-xl"
                     />
